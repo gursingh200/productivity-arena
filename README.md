@@ -78,8 +78,8 @@ Every merge to `main` that changes `mac/` builds a signed release. Every install
 
 ### 4. Invite people
 
-1. Send them your web app's address and your latest release page (`https://github.com/<you>/<repo>/releases/latest`).
-2. They download `Arena-<version>.zip`, unzip it and move **Arena** to Applications.
+1. Send them your web app's address and the download link, which always points at the newest version: `https://github.com/<you>/<repo>/releases/latest/download/Arena.dmg`
+2. They open **Arena.dmg** and drag **Arena** into Applications.
 3. The first open is blocked because the app isn't notarized by Apple. They go to **System Settings → Privacy & Security** and click **Open Anyway**. This happens only once; updates install without it. An Apple Developer ID ($99/year) removes this step.
 4. They sign in on the web app, choose what to share, open **Connect a Mac** and click **Open in Arena**.
 

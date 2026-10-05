@@ -13,6 +13,7 @@
 # Output (upload both to the release tagged v$ARENA_VERSION):
 #   mac/dist/release/Arena-$ARENA_VERSION.zip
 #   mac/dist/release/latest.json
+#   mac/dist/release/Arena.dmg  (drag-to-install image, same name every release)
 set -euo pipefail
 
 for name in ARENA_VERSION ARENA_BUILD ARENA_SIGN_IDENTITY ARENA_UPDATE_REPO ARENA_UPDATE_PUBLIC_KEY ARENA_UPDATE_SIGNING_KEY; do
@@ -49,6 +50,18 @@ SIGNATURE="$("$SIGN" sign "$OUT/$ZIP_NAME")"
 cat > "$OUT/latest.json" <<JSON
 {"version":"$ARENA_VERSION","build":$ARENA_BUILD,"zip":"$ZIP_NAME","sha256":"$SHA256","signature":"$SIGNATURE","minimumSystemVersion":"14.0"}
 JSON
+
+# A drag-to-install disk image for people downloading Arena by hand. It has the
+# same name every release, so .../releases/latest/download/Arena.dmg always
+# points at the newest version. (The updater uses the zip.)
+echo "Packaging Arena.dmg..."
+DMG_DIR="$(mktemp -d)"
+ditto "$MAC_DIR/dist/Arena.app" "$DMG_DIR/Arena.app"
+ln -s /Applications "$DMG_DIR/Applications"
+hdiutil create -volname "Arena $ARENA_VERSION" -srcfolder "$DMG_DIR" -ov -format UDZO -fs HFS+ "$OUT/Arena.dmg" >/dev/null
+rm -rf "$DMG_DIR"
+codesign --force --sign "$ARENA_SIGN_IDENTITY" "$OUT/Arena.dmg"
+hdiutil verify "$OUT/Arena.dmg" >/dev/null
 
 echo "Release ready in $OUT:"
 ls -lh "$OUT"

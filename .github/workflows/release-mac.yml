@@ -77,9 +77,10 @@ jobs:
           gh release create "v$ARENA_VERSION" \
             "mac/dist/release/Arena-$ARENA_VERSION.zip" \
             "mac/dist/release/latest.json" \
+            "mac/dist/release/Arena.dmg" \
             --repo "$ARENA_UPDATE_REPO" \
             --title "Arena $ARENA_VERSION" \
-            --notes "Built from ${{ github.repository }}@${{ github.sha }}." \
+            --notes "Download **Arena.dmg**, open it and drag Arena to Applications. The first time, approve it in System Settings → Privacy & Security → Open Anyway. Installed copies update themselves. Built from ${{ github.sha }}." \
             --latest
 
       - name: Remove the temporary keychain
