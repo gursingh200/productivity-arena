@@ -417,6 +417,21 @@ public final class Store {
         try run("INSERT OR IGNORE INTO dirty_minute(t) VALUES(?);", [.int(t)])
     }
 
+    /// Queues every minute and chat with data since `t` to be sent again, e.g.
+    /// to a server this Mac was just paired with.
+    public func markForResend(since t: MinuteT) throws {
+        try transaction {
+            try run("""
+                INSERT OR IGNORE INTO dirty_minute(t)
+                SELECT t FROM active_minute WHERE t >= ?1
+                UNION SELECT t FROM app_minute WHERE t >= ?1
+                UNION SELECT t FROM meeting_minute WHERE t >= ?1
+                UNION SELECT t FROM session_minute WHERE t >= ?1;
+                """, [.int(t)])
+            try run("INSERT OR IGNORE INTO dirty_chat(agent, session) SELECT DISTINCT agent, session FROM session_minute WHERE t >= ?;", [.int(t)])
+        }
+    }
+
     public func dirtyMinutes(limit: Int) throws -> [MinuteT] {
         try query("SELECT t FROM dirty_minute ORDER BY t LIMIT ?;", [.int(Int64(limit))]) { $0.int(0) }
     }

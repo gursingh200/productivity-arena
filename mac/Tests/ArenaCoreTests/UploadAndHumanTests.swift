@@ -318,3 +318,23 @@ struct LineReaderTests {
         #expect(try box.store.meetingTotal(from: 0, to: 6000) == 45)
     }
 }
+
+struct ResendTests {
+    @Test func pairingQueuesTheLast24HoursAgain() throws {
+        let box = try Sandbox()
+        let old = minuteOf(at("2026-10-04T08:00:00Z"))
+        let recent = minuteOf(at("2026-10-05T09:00:00Z"))
+        let call = minuteOf(at("2026-10-05T09:05:00Z"))
+        try box.store.addAppSeconds(t: old, bundleId: "com.apple.Safari", appName: "Safari", sec: 30)
+        try box.store.addAppSeconds(t: recent, bundleId: "com.apple.Safari", appName: "Safari", sec: 30)
+        try box.store.addMeetingSeconds(t: call, bundleId: "us.zoom.xos", appName: "Zoom", sec: 40)
+        try box.store.setSessionMinute(agent: "claude", session: "s1", t: recent, sec: 60)
+        try box.store.clearDirtyMinutes(try box.store.dirtyMinutes(limit: 100))
+        try box.store.clearDirtyChats(try box.store.dirtyChats(limit: 100))
+
+        try box.store.markForResend(since: minuteOf(at("2026-10-04T10:00:00Z")))
+
+        #expect(try box.store.dirtyMinutes(limit: 100) == [recent, call])
+        #expect(try box.store.dirtyChats(limit: 100).map { "\($0.agent)/\($0.session)" } == ["claude/s1"])
+    }
+}

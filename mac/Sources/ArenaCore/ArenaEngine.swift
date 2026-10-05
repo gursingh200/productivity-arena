@@ -52,6 +52,18 @@ public final class ArenaEngine: @unchecked Sendable {
         self.settingsSnapshot = loaded
         self.client = ArenaClient(serverURL: settings.serverURL, token: token)
         self.device = device(settings.deviceId)
+        // So the menu bar shows today's totals at launch, not 0m until the first tick.
+        updateSummary(now: Date())
+    }
+
+    /// How much history a newly paired server gets.
+    public static let resendOnPairing: TimeInterval = 24 * 3600
+
+    /// Queues the last 24 hours to be uploaded again. Called after pairing, so a
+    /// new server (or a new pairing with the same one) gets today's full picture;
+    /// the server replaces what an earlier pairing of this Mac sent.
+    public func resendRecentHistory(now: Date = Date()) {
+        queue.sync { log { try store.markForResend(since: minuteOf(now.addingTimeInterval(-Self.resendOnPairing))) } }
     }
 
     // MARK: - Agent logs

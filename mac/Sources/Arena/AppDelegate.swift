@@ -227,6 +227,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Keychain.saveToken(link.token)
         engine.setToken(link.token)
         engine.updateSettings { $0.serverURL = link.server }
+        engine.resendRecentHistory()
         menuBar.showMessage("This Mac is now connected to \(link.server.host ?? "Arena").")
         uploadSoon()
     }
