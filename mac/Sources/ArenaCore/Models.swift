@@ -225,6 +225,23 @@ public struct QuestStatus: Codable, Equatable {
     public var expiresAt: String?
 }
 
+extension QuestStatus {
+    /// How many quests the menu shows.
+    public static let menuCount = 3
+
+    /// The quests the menu shows: offers first (they need an answer), then the
+    /// active quests closest to done, three at most.
+    public static func forMenu(_ quests: [QuestStatus]) -> (offered: [QuestStatus], active: [QuestStatus]) {
+        let offered = Array(quests.filter { $0.state == "offered" }.prefix(menuCount))
+        let done: (QuestStatus) -> Double = { q in
+            guard let target = q.target, target > 0 else { return 0 }
+            return min(1, (q.progress ?? 0) / target)
+        }
+        let active = quests.filter { $0.state == "active" }.sorted { done($0) > done($1) }
+        return (offered, Array(active.prefix(menuCount - offered.count)))
+    }
+}
+
 public struct StatusPayload: Codable, Equatable {
     public var user: StatusUser?
     public var today: StatusToday?

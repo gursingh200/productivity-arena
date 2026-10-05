@@ -63,10 +63,10 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         let summary = engine.todaySummary()
         let settings = engine.currentSettings()
 
-        menu.addItem(label("Today  ·  Human \(Format.duration(summary.humanSeconds))  ·  Agents \(Format.duration(Int(summary.agentSeconds)))", bold: true))
-        if summary.meetingSeconds > 0 {
-            menu.addItem(label("Meetings \(Format.duration(summary.meetingSeconds))"))
-        }
+        // Header: version and update state.
+        menu.addItem(label("Arena \(ArenaEngine.version)" + (onCheckForUpdates != nil ? "  ·  \(updateStatus ?? "Not checked yet")" : "")))
+        menu.addItem(.separator())
+        menu.addItem(label("Human \(Format.duration(summary.humanSeconds))  ·  Agents \(Format.duration(Int(summary.agentSeconds)))  ·  Meetings \(Format.duration(summary.meetingSeconds))"))
         if summary.agentsWorkingNow > 0 {
             menu.addItem(label("\(summary.agentsWorkingNow) agent chat\(summary.agentsWorkingNow == 1 ? "" : "s") working now"))
         }
@@ -82,7 +82,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         if !summary.topApps.isEmpty {
             menu.addItem(.separator())
             menu.addItem(label("Top apps today", bold: true))
-            for app in summary.topApps {
+            for app in summary.topApps.prefix(Self.topAppCount) {
                 let name = app.bundleId == "private" ? "Private apps" : app.appName
                 menu.addItem(label("\(name)  \(Format.duration(app.sec))"))
             }
@@ -102,11 +102,6 @@ final class MenuBarController: NSObject, NSMenuDelegate {
             menu.addItem(action("Open Dashboard", key: "d") { NSWorkspace.shared.open(url) })
         }
         menu.addItem(.separator())
-        menu.addItem(label("Arena \(ArenaEngine.version) (build \(ArenaEngine.build))"))
-        if let onCheckForUpdates {
-            if let updateStatus { menu.addItem(label(updateStatus)) }
-            menu.addItem(action("Check for Updates") { onCheckForUpdates() })
-        }
         menu.addItem(NSMenuItem(title: "Quit Arena", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
     }
 
@@ -127,10 +122,10 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         if !parts.isEmpty { menu.addItem(label(parts.joined(separator: "  ·  "))) }
     }
 
+    static let topAppCount = 2
+
     private func addQuests(to menu: NSMenu) {
-        let quests = status?.quests ?? []
-        let offered = quests.filter { $0.state == "offered" }
-        let active = quests.filter { $0.state == "active" }
+        let (offered, active) = QuestStatus.forMenu(status?.quests ?? [])
         guard !offered.isEmpty || !active.isEmpty else { return }
         menu.addItem(.separator())
         menu.addItem(label("Quests", bold: true))
@@ -244,6 +239,9 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         let sub = NSMenu()
         sub.addItem(label(settings.serverURL.map { "Server: \($0.host ?? $0.absoluteString)" } ?? "Not connected"))
         sub.addItem(action("Paste Pairing Link…") { [weak self] in self?.askForPairingLink() })
+        if let onCheckForUpdates {
+            sub.addItem(action("Check for Updates") { onCheckForUpdates() })
+        }
         sub.addItem(.separator())
         switch engine.linearState {
         case .off:

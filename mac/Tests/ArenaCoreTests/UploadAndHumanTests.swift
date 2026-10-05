@@ -338,3 +338,18 @@ struct ResendTests {
         #expect(try box.store.dirtyChats(limit: 100).map { "\($0.agent)/\($0.session)" } == ["claude/s1"])
     }
 }
+
+struct MenuQuestTests {
+    func quest(_ id: String, _ state: String, _ progress: Double, _ target: Double) -> QuestStatus {
+        QuestStatus(id: id, kind: "daily", title: id, xp: 100, progress: progress, target: target, unit: "sec", state: state, expiresAt: nil)
+    }
+
+    @Test func showsTheThreeClosestToDoneAfterOffers() {
+        let quests = [quest("a", "active", 1, 10), quest("b", "active", 9, 10), quest("c", "active", 5, 10),
+                      quest("d", "active", 0, 10), quest("live", "offered", 0, 10)]
+        let shown = QuestStatus.forMenu(quests)
+        #expect(shown.offered.map(\.id) == ["live"])
+        #expect(shown.active.map(\.id) == ["b", "c"])
+        #expect(QuestStatus.forMenu(quests.filter { $0.state == "active" }).active.map(\.id) == ["b", "c", "a"])
+    }
+}
