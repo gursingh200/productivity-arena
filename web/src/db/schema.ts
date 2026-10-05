@@ -357,6 +357,31 @@ export const quests = pgTable(
   ]
 );
 
+// ─── Leagues ──────────────────────────────────────────────────────────────────
+
+/** The league each person holds during a company week (Monday), saved once the week before is over. */
+export const leagueWeeks = pgTable(
+  "league_weeks",
+  {
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    weekStart: text("week_start").notNull(), // YYYY-MM-DD, a Monday
+    league: text("league").notNull(),
+    /** How they got here from last week: up, down, stay, frozen (away) or start. */
+    move: text("move").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.weekStart] }), index("league_weeks_week_idx").on(table.weekStart)]
+);
+
+/** Weekdays someone marked themselves away (company-timezone dates). */
+export const awayDays = pgTable(
+  "away_days",
+  {
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    day: text("day").notNull(), // YYYY-MM-DD
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.day] }), index("away_days_day_idx").on(table.day)]
+);
+
 // ─── Bug reports ──────────────────────────────────────────────────────────────
 
 export const bugReports = pgTable(

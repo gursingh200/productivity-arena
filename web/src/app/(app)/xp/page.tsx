@@ -1,4 +1,5 @@
 import { BLOCK_MAX_GAP_MIN, FOCUS_BLOCK_MIN } from "@/lib/game/activity";
+import { ABSOLUTE, LADDER, LEAGUE_LABELS, RELATIVE, RELATIVE_MIN_PEOPLE } from "@/lib/leagues";
 import { levelThreshold, xpForLevel } from "@/lib/levels";
 import { QUESTS, type QuestDefinition, type QuestKind } from "@/lib/quest-engine";
 import {
@@ -99,9 +100,28 @@ export default function XpPage() {
 
       <h2 className="section-label">Leagues</h2>
       <section className="panel">
-        <p className="help" style={{ margin: 0 }}>
-          Each week’s league comes from last week’s XP among everyone with at least 1 hour of focus time: top 5% Legend, next
-          15% Diamond, next 30% Gold, next 30% Silver, the rest Bronze. New people start in Bronze.
+        <p className="help" style={{ marginTop: 0 }}>
+          Everyone starts in Bronze. After each week you move up or down at most one league. Under 1 hour of focus time in a
+          week moves you down. A league with fewer than {RELATIVE_MIN_PEOPLE} active people uses fixed XP bars; a bigger one
+          ranks its people against each other.
+        </p>
+        <table className="table">
+          <thead><tr><th>League</th><th className="r">Small league: up at</th><th className="r">down below</th><th className="r">Big league: up</th><th className="r">down</th></tr></thead>
+          <tbody>
+            {LADDER.map((l) => (
+              <tr key={l}>
+                <td>{LEAGUE_LABELS[l]}</td>
+                <td className="r num">{ABSOLUTE[l].up?.toLocaleString("en-US") ?? "–"}</td>
+                <td className="r num">{ABSOLUTE[l].down?.toLocaleString("en-US") ?? "–"}</td>
+                <td className="r num">{RELATIVE[l].upShare ? `Top ${RELATIVE[l].upShare * 100}%${RELATIVE[l].upFloor ? ` with ${RELATIVE[l].upFloor.toLocaleString("en-US")}+` : ""}` : "–"}</td>
+                <td className="r num">{RELATIVE[l].downShare ? `Bottom ${RELATIVE[l].downShare * 100}%${RELATIVE[l].keepFloor ? ` or under ${RELATIVE[l].keepFloor.toLocaleString("en-US")}` : ""}` : "–"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <p className="help" style={{ marginBottom: 0 }}>
+          Away (Settings): a whole week away keeps your league; some days away lower every bar in proportion, and big
+          leagues rank you on XP per day you were there. At most two whole weeks in a row.
         </p>
       </section>
     </div>

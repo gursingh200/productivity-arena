@@ -1,132 +1,78 @@
-import { describe, it, expect } from "vitest";
-import { computeLeaguesForAll, type UserWeeklyData } from "@/lib/leagues";
+import { describe, expect, it } from "vitest";
+import { nextLeagues, type League, type WeekResult } from "@/lib/leagues";
 
-function makeUsers(count: number, xpFn: (i: number) => number, humanSec = 7200): UserWeeklyData[] {
-  return Array.from({ length: count }, (_, i) => ({
-    userId: `user-${i}`,
-    weeklyXp: xpFn(i),
-    humanSec,
-  }));
-}
+const person = (userId: string, league: League, weeklyXp: number, extra: Partial<WeekResult> = {}): WeekResult => ({
+  userId, league, weeklyXp, focusSec: 10 * 3600, availableDays: 5, ...extra,
+});
+const leagueOf = (results: WeekResult[]) => {
+  const next = nextLeagues(results);
+  return Object.fromEntries(results.map((r) => [r.userId, next.get(r.userId)!.league]));
+};
 
-describe("computeLeaguesForAll", () => {
-  it("returns empty map for empty input", () => {
-    const result = computeLeaguesForAll([]);
-    expect(result.size).toBe(0);
+describe("small leagues use fixed thresholds", () => {
+  it("one person climbs one league at a time, however much XP", () => {
+    expect(leagueOf([person("a", "bronze", 99_999)])).toEqual({ a: "silver" });
   });
 
-  it("marks a single inactive user as bronze", () => {
-    const users: UserWeeklyData[] = [
-      { userId: "u1", weeklyXp: 9999, humanSec: 3599 }, // 1 sec below 1h
-    ];
-    const result = computeLeaguesForAll(users);
-    expect(result.get("u1")).toBe("bronze");
+  it("moves up at the bar, down below the floor, otherwise stays", () => {
+    expect(leagueOf([
+      person("up", "silver", 1750), person("stay", "silver", 1749), person("down", "silver", 499),
+    ])).toEqual({ up: "gold", stay: "silver", down: "bronze" });
   });
 
-  it("marks a single active user (>= 1h) as legend (top 5% of 1)", () => {
-    const users: UserWeeklyData[] = [
-      { userId: "u1", weeklyXp: 500, humanSec: 3600 },
-    ];
-    const result = computeLeaguesForAll(users);
-    expect(result.get("u1")).toBe("legend");
+  it("Bronze never drops and Legend never rises", () => {
+    expect(leagueOf([person("b", "bronze", 0), person("l", "legend", 99_999)])).toEqual({ b: "bronze", l: "legend" });
   });
+});
 
-  it("threshold: exactly 3600 humanSec → active (legend with 1 user)", () => {
-    const users: UserWeeklyData[] = [
-      { userId: "u1", weeklyXp: 100, humanSec: 3600 },
-    ];
-    const result = computeLeaguesForAll(users);
-    expect(result.get("u1")).toBe("legend");
-  });
+describe("bigger leagues rank people against each other", () => {
+  const silver = (xps: number[]) => xps.map((xp, i) => person(`s${i}`, "silver", xp));
 
-  it("threshold: 3599 humanSec → inactive → bronze", () => {
-    const users: UserWeeklyData[] = [
-      { userId: "u1", weeklyXp: 9999, humanSec: 3599 },
-    ];
-    const result = computeLeaguesForAll(users);
-    expect(result.get("u1")).toBe("bronze");
-  });
-
-  it("inactive users always get bronze, even with high XP", () => {
-    const users: UserWeeklyData[] = [
-      { userId: "active", weeklyXp: 100, humanSec: 7200 },
-      { userId: "inactive-high", weeklyXp: 9999, humanSec: 0 },
-    ];
-    const result = computeLeaguesForAll(users);
-    expect(result.get("inactive-high")).toBe("bronze");
-    expect(result.get("active")).toBe("legend"); // only active user
-  });
-
-  describe("20 active users — exact percentile boundaries", () => {
-    // Users sorted by XP descending (user-0 = highest XP = rank 1)
-    // For N=20: legend≤1, diamond≤4, gold≤10, silver≤16, bronze=17-20
-    const users = makeUsers(20, (i) => 1000 - i * 10); // all distinct XP
-
-    it("rank 1 (top 5%) → legend", () => {
-      const result = computeLeaguesForAll(users);
-      expect(result.get("user-0")).toBe("legend"); // 1000 XP
-    });
-
-    it("ranks 2–4 (next 15%) → diamond", () => {
-      const result = computeLeaguesForAll(users);
-      expect(result.get("user-1")).toBe("diamond"); // 990 XP
-      expect(result.get("user-2")).toBe("diamond"); // 980 XP
-      expect(result.get("user-3")).toBe("diamond"); // 970 XP
-    });
-
-    it("ranks 5–10 (next 30%) → gold", () => {
-      const result = computeLeaguesForAll(users);
-      expect(result.get("user-4")).toBe("gold");  // 960 XP
-      expect(result.get("user-9")).toBe("gold");  // 910 XP
-    });
-
-    it("ranks 11–16 (next 30%) → silver", () => {
-      const result = computeLeaguesForAll(users);
-      expect(result.get("user-10")).toBe("silver"); // 900 XP
-      expect(result.get("user-15")).toBe("silver"); // 850 XP
-    });
-
-    it("ranks 17–20 (bottom 20%) → bronze", () => {
-      const result = computeLeaguesForAll(users);
-      expect(result.get("user-16")).toBe("bronze"); // 840 XP
-      expect(result.get("user-19")).toBe("bronze"); // 810 XP
+  it("Silver: top 25% up, bottom 15% down", () => {
+    // 8 people: ceil(8 × 0.25) = 2 up, ceil(8 × 0.15) = 2 down.
+    expect(leagueOf(silver([800, 700, 600, 500, 400, 300, 200, 100]))).toEqual({
+      s0: "gold", s1: "gold", s2: "silver", s3: "silver", s4: "silver", s5: "silver", s6: "bronze", s7: "bronze",
     });
   });
 
-  it("users with identical XP receive the same league (ties)", () => {
-    // 3 users with the same XP → all rank 1 → all legend (for N=3, ceil(3*0.05)=1)
-    // Actually with N=3: legendCut=ceil(0.15)=1. All have rank 1 → legend
-    // Let's use N=20 with a tie at the top
-    const users: UserWeeklyData[] = [
-      ...makeUsers(18, (i) => 500 - i * 10), // distinct XP 500,490,...,330
-      { userId: "tie-a", weeklyXp: 1000, humanSec: 7200 },
-      { userId: "tie-b", weeklyXp: 1000, humanSec: 7200 },
-    ];
-    const result = computeLeaguesForAll(users);
-    // Both tied-top users should get the same league
-    expect(result.get("tie-a")).toBe(result.get("tie-b"));
+  it("Gold: the top need 1,500 XP to move up", () => {
+    const gold = [1600, 1400, 1000, 900, 800].map((xp, i) => person(`g${i}`, "gold", xp));
+    const next = leagueOf(gold);
+    expect(next.g0).toBe("diamond"); // top 20% of 5 = 1 person, over the floor
+    expect(next.g4).toBe("silver"); // bottom 20%
   });
 
-  it("inactive users do not affect the percentile rank of active users", () => {
-    // 1 active + 10 inactive → active user should be legend (1 active user)
-    const users: UserWeeklyData[] = [
-      { userId: "active", weeklyXp: 100, humanSec: 7200 },
-      ...Array.from({ length: 10 }, (_, i) => ({
-        userId: `inactive-${i}`,
-        weeklyXp: 9999, // high XP but inactive
-        humanSec: 0,
-      })),
-    ];
-    const result = computeLeaguesForAll(users);
-    expect(result.get("active")).toBe("legend");
+  it("Legend: under 3,000 XP drops even when not in the bottom 30%", () => {
+    const legend = [5000, 4500, 4000, 2900, 2800, 100].map((xp, i) => person(`l${i}`, "legend", xp));
+    const next = leagueOf(legend);
+    expect(next.l3).toBe("diamond");
+    expect(next.l0).toBe("legend");
+  });
+});
+
+describe("activity and away days", () => {
+  it("under an hour of focus time moves you down", () => {
+    expect(leagueOf([person("a", "gold", 5000, { focusSec: 3599 })])).toEqual({ a: "silver" });
   });
 
-  it("all users with equal XP get the same league", () => {
-    const users = makeUsers(10, () => 500); // all same XP → all rank 1
-    const result = computeLeaguesForAll(users);
-    // All should have the same league (legend, since rank 1 for all)
-    const leagues = [...result.values()];
-    expect(new Set(leagues).size).toBe(1);
-    expect(leagues[0]).toBe("legend");
+  it("a fully away week freezes the league", () => {
+    const next = nextLeagues([person("a", "gold", 0, { focusSec: 0, availableDays: 0 })]);
+    expect(next.get("a")).toEqual({ league: "gold", move: "frozen" });
+  });
+
+  it("away days shrink the bars", () => {
+    // 2 of 5 days available: Silver's 1,750 bar becomes 700, the 1-hour bar 24 minutes.
+    expect(leagueOf([person("a", "silver", 700, { availableDays: 2, focusSec: 1440 })])).toEqual({ a: "gold" });
+  });
+
+  it("ranks partly away people by XP per available day", () => {
+    const group = [
+      person("part", "bronze", 600, { availableDays: 1 }), // 600 a day
+      ...[2000, 1500, 1000, 900, 800].map((xp, i) => person(`b${i}`, "bronze", xp)), // ≤ 400 a day
+    ];
+    const next = leagueOf(group);
+    expect(next.part).toBe("silver");
+    expect(next.b0).toBe("silver"); // top 30% of 6 = 2
+    expect(next.b1).toBe("bronze");
   });
 });

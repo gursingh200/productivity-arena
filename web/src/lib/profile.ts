@@ -8,6 +8,7 @@
 import { and, desc, eq, gte, inArray, lt, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { chats, dailyRollup, linearIssues, quests, users, xpLedger, type Quest, type User } from "@/db/schema";
+import { awayToday } from "@/lib/league-db";
 import { type League } from "@/lib/leagues";
 import { computeLevel, type LevelInfo } from "@/lib/levels";
 import { questsForUser } from "@/lib/quest-db";
@@ -58,6 +59,8 @@ export interface ProfileData {
     bio: string | null;
     guild: Standing["guild"];
     joined: Date;
+    /** Marked away today. */
+    away: boolean;
   };
   isOwner: boolean;
   visible: Visibility;
@@ -169,6 +172,7 @@ export async function loadProfile(handle: string, viewer: User, now = new Date()
   return {
     user: {
       id: user.id, name: user.name ?? handle, handle, image: user.image, bio: user.bio, joined: user.createdAt,
+      away: (await awayToday([user.id])).has(user.id),
       guild: user.guild ? { id: user.guild.id, name: user.guild.name, color: user.guild.color } : null,
     },
     isOwner,

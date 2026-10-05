@@ -6,7 +6,7 @@
  */
 import { lt } from "drizzle-orm";
 import { db } from "@/db";
-import { chats, dailyRollup, leaderboardHistory, minuteAgent, minuteApp, minuteMeeting, periodTotals, quests, xpLedger } from "@/db/schema";
+import { awayDays, chats, dailyRollup, leaderboardHistory, leagueWeeks, minuteAgent, minuteApp, minuteMeeting, periodTotals, quests, xpLedger } from "@/db/schema";
 import { companyTimezone } from "@/lib/standings";
 import { dayBounds } from "@/lib/timezone";
 
@@ -52,6 +52,8 @@ export async function purgeBeforeStart(): Promise<{ startDay: string | null }> {
     // Saved boards for periods that began before the start; rebuilt lazily from what's left.
     await tx.delete(leaderboardHistory).where(lt(leaderboardHistory.periodStart, day));
     await tx.delete(periodTotals).where(lt(periodTotals.periodStart, day));
+    await tx.delete(leagueWeeks).where(lt(leagueWeeks.weekStart, day));
+    await tx.delete(awayDays).where(lt(awayDays.day, day));
   });
   return { startDay: day };
 }

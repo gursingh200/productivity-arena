@@ -296,9 +296,19 @@ rollups and the XP ledger, which are permanent. Only people sharing a category w
 the period is saved are included; readers need to share it, and people who later
 stop sharing drop out of their past boards.
 
-**Leagues:** league for week W comes from the previous week's percentile among active
-users (≥ 1 h human that week): top 5% Legend, next 15% Diamond, next 30% Gold,
-next 30% Silver, rest Bronze. New users start in Bronze. Derived, no cron needed.
+**Leagues:** a ladder (Bronze → Silver → Gold → Diamond → Legend). Everyone starts in
+Bronze; after each week people move at most one league (`nextLeagues` in leagues.ts).
+Under 1 h of focus time moves you down. A league with fewer than 5 active people uses
+fixed weekly XP bars (up: Bronze 1,000, Silver 1,750, Gold 2,500, Diamond 3,250; down
+below: Silver 500, Gold 1,000, Diamond 1,750, Legend 2,500). A bigger league ranks its
+people: up = top 30/25/20/15% (Gold needs 1,500 XP, Diamond 2,500), down = bottom
+15/20/25/30%, and Legend also drops anyone under 3,000 XP. Each week's leagues are saved
+to `league_weeks` the first time they're needed after the previous week ends.
+
+**Away:** people mark weekdays away in Settings (`away_days`): next week any time, this
+week only on Monday, at most two whole weeks in a row. A whole week away freezes their
+league and leaves them out of the ranking; some days away scale every bar by available
+weekdays, and big leagues rank by XP per available day. Teammates see "Away" that day.
 
 ## 5. Quests
 

@@ -13,7 +13,7 @@ export function ProfileHero({ data }: { data: ProfileData }) {
       <div className="hero-who">
         <Avatar name={user.name} image={user.image} size={72} />
         <div style={{ minWidth: 0 }}>
-          <h1 className="hero-name">{user.name}</h1>
+          <h1 className="hero-name">{user.name}{user.away ? <span className="away-badge">Away</span> : null}</h1>
           <div className="hero-meta">
             <span>@{user.handle}</span>
             {user.guild ? <span className="guild"><i className="dot" style={{ background: user.guild.color }} />{user.guild.name}</span> : null}

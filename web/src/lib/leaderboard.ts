@@ -7,6 +7,7 @@
 import { inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { users } from "@/db/schema";
+import { awayToday } from "@/lib/league-db";
 import type { League } from "@/lib/leagues";
 import { shares, visibility, type Category, type Sharer } from "@/lib/sharing";
 import { rankBy, weeklyStandings, type Standing } from "@/lib/standings";
@@ -34,6 +35,8 @@ export interface LeaderboardRow {
   weeklyHumanSec: number | null;
   weeklyAgentSec: number | null;
   league: League | null;
+  /** Marked away today. */
+  away: boolean;
 }
 
 export type Leaderboard =
@@ -65,6 +68,7 @@ export async function leaderboard(tab: LeaderboardTab, viewer: Sharer, now: Date
     const owner = byId.get(s.userId);
     return owner !== undefined && visibility(me, owner)[category];
   });
+  const away = await awayToday(onBoard.map((s) => s.userId), now);
   const rows = rankBy(onBoard, VALUE[tab]).map(({ item, rank }) => {
     const see = visibility(me, byId.get(item.userId)!);
     return {
@@ -78,6 +82,7 @@ export async function leaderboard(tab: LeaderboardTab, viewer: Sharer, now: Date
       weeklyHumanSec: see.human ? item.weeklyHumanSec : null,
       weeklyAgentSec: see.agents ? item.weeklyAgentSec : null,
       league: see.xp ? item.league : null,
+      away: away.has(item.userId),
     };
   });
   return { locked: false, category, viewerLeague, rows };

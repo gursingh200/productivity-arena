@@ -9,7 +9,8 @@
 import { and, gte, lt, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { dailyRollup, xpLedger } from "@/db/schema";
-import { computeLeaguesForAll, type League } from "@/lib/leagues";
+import { leagueOf, leaguesForWeek } from "@/lib/league-db";
+import { type League } from "@/lib/leagues";
 import { computeLevel } from "@/lib/levels";
 import { addDays, getWeekRange, toUserDay } from "@/lib/timezone";
 
@@ -46,7 +47,6 @@ export async function weeklyStandings(now: Date = new Date()): Promise<Standing[
 /** Standings for the company week starting on `thisWeek` (a Monday, YYYY-MM-DD). */
 export async function standingsForWeek(thisWeek: string): Promise<Standing[]> {
   const nextWeek = addDays(thisWeek, 7);
-  const lastWeek = addDays(thisWeek, -7);
   const allUsers = await db.query.users.findMany({ with: { guild: true } });
 
   const xpBetween = async (from: string | null, to: string | null) => {
@@ -66,17 +66,10 @@ export async function standingsForWeek(thisWeek: string): Promise<Standing[]> {
   };
 
   const weekXp = await xpBetween(thisWeek, nextWeek);
-  const lastWeekXp = await xpBetween(lastWeek, thisWeek);
   const totalXp = await xpBetween(null, null);
   const weekTime = await timeBetween(thisWeek, nextWeek);
-  const lastWeekTime = await timeBetween(lastWeek, thisWeek);
-
-  const leagues = computeLeaguesForAll(allUsers.map((u) => ({
-    userId: u.id,
-    weeklyXp: lastWeekXp.get(u.id) ?? 0,
-    // League eligibility counts calls too (focus time).
-    humanSec: lastWeekTime.get(u.id)?.focus ?? 0,
-  })));
+  // The ladder: this week's league follows from last week's (league-db.ts).
+  const leagues = await leaguesForWeek(thisWeek);
 
   const standings: Standing[] = allUsers.map((u) => {
     const total = totalXp.get(u.id) ?? 0;
@@ -91,7 +84,7 @@ export async function standingsForWeek(thisWeek: string): Promise<Standing[]> {
       weeklyAgentSec: weekTime.get(u.id)?.agent ?? 0,
       totalXp: total,
       level: computeLevel(total).level,
-      league: leagues.get(u.id) ?? "bronze",
+      league: leagueOf(leagues, u.id),
       rank: 0,
     };
   });

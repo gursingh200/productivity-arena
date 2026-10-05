@@ -78,6 +78,13 @@
       "when": 1791208235005,
       "tag": "0010_bug_reports",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1791211519232,
+      "tag": "0011_league_ladder_away",
+      "breakpoints": true
     }
   ]
 }

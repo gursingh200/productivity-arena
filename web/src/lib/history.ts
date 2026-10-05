@@ -11,7 +11,8 @@
 import { and, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { dailyRollup, leaderboardHistory, periodTotals, users, xpLedger } from "@/db/schema";
-import { computeLeaguesForAll, type League } from "@/lib/leagues";
+import { leagueOf, leaguesForWeek } from "@/lib/league-db";
+import { type League } from "@/lib/leagues";
 import { shares, visibility, type Category, type Sharer } from "@/lib/sharing";
 import { companyTimezone, rankBy, weekDays } from "@/lib/standings";
 import { addDays, dayBounds, toUserDay } from "@/lib/timezone";
@@ -84,12 +85,10 @@ export async function savePeriod(period: Period, start: string, end: string): Pr
   const of = (id: string) => values.get(id) ?? { xp: 0, human: 0, agent: 0, meeting: 0, focus: 0 };
 
   // Weekly boards are also split by the league each person was in that week.
-  let leagues = new Map<string, League>();
+  const leagues = new Map<string, League>();
   if (period === "week") {
-    const before = await valuesBetween(addDays(start, -7), start);
-    leagues = computeLeaguesForAll(people.map((p) => ({
-      userId: p.id, weeklyXp: before.get(p.id)?.xp ?? 0, humanSec: before.get(p.id)?.focus ?? 0,
-    })));
+    const held = await leaguesForWeek(start);
+    for (const p of people) leagues.set(p.id, leagueOf(held, p.id));
   }
 
   const rows: (typeof leaderboardHistory.$inferInsert)[] = [];

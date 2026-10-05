@@ -75,7 +75,7 @@ export default async function LeaderboardPage({ searchParams }: { searchParams: 
               <Avatar name={r.name} image={r.image} size={38} />
               <span style={{ minWidth: 0 }}>
                 <span className="board-name" style={{ display: "flex", alignItems: "center" }}>
-                  <span className="board-name">{r.name}</span>{r.userId === viewer.id ? <span className="you">You</span> : null}
+                  <span className="board-name">{r.name}</span>{r.userId === viewer.id ? <span className="you">You</span> : null}{r.away ? <span className="away-badge">Away</span> : null}
                 </span>
                 <span className="board-sub">
                   {r.guild ? <><i className="dot" style={{ background: r.guild.color }} />{r.guild.name}</> : "No guild"}
