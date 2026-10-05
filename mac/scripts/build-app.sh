@@ -49,8 +49,9 @@ rm -rf "$APP_DIR"
 mkdir -p "$MACOS_DIR"
 mkdir -p "$RESOURCES_DIR"
 
-# Copy binary.
+# Copy binary and icon (Resources/AppIcon.icns is built from AppIcon.svg).
 cp "$BINARY" "$MACOS_DIR/Arena"
+cp "$MAC_DIR/Resources/AppIcon.icns" "$RESOURCES_DIR/AppIcon.icns"
 
 # Write Info.plist.
 cat > "$CONTENTS_DIR/Info.plist" << PLIST
@@ -58,6 +59,8 @@ cat > "$CONTENTS_DIR/Info.plist" << PLIST
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
     <key>CFBundleIdentifier</key>
     <string>${BUNDLE_ID}</string>
     <key>CFBundleName</key>
