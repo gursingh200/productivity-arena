@@ -69,6 +69,7 @@ for 7 days is paused (data kept; restore it from the dashboard).
 | `ARENA_SECRET` | Output of `openssl rand -hex 32` (encrypts Linear keys; never change it) |
 | `PUBLIC_BASE_URL` | `https://<your-app>.vercel.app` (used in Mac pairing links) |
 | `ARENA_TIMEZONE` | The company's timezone for weeks, e.g. `Asia/Kolkata` |
+| `ARENA_RELEASES_REPO` | Optional: `owner/repo` with Mac releases, if not the repo Vercel deploys from |
 
 Don't set `ARENA_DEV_LOGIN` in production: it enables passwordless email login.
 

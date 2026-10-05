@@ -78,7 +78,7 @@ Every merge to `main` that changes `mac/` builds a signed release. Every install
 
 ### 4. Invite people
 
-1. Send them your web app's address and the download link, which always points at the newest version: `https://github.com/<you>/<repo>/releases/latest/download/Arena.dmg`
+1. Send them your web app's address. Its **Download** page links to the newest Arena.dmg and has a prompt they can paste into their coding agent to install it.
 2. They open **Arena.dmg** and drag **Arena** into Applications.
 3. The first open is blocked because the app isn't notarized by Apple. They go to **System Settings → Privacy & Security** and click **Open Anyway**. This happens only once; updates install without it. An Apple Developer ID ($99/year) removes this step.
 4. They sign in on the web app, choose what to share, open **Connect a Mac** and click **Open in Arena**.
@@ -102,6 +102,7 @@ Web app (environment variables; see [`web/.env.example`](web/.env.example)):
 | `ARENA_SECRET` | Encrypts members' Linear API keys; never change it |
 | `PUBLIC_BASE_URL` | Your web app's address, used in Mac pairing links |
 | `ARENA_TIMEZONE` | The timezone leaderboard weeks follow |
+| `ARENA_RELEASES_REPO` | `owner/repo` with your Mac releases, for the site's download link. On Vercel it defaults to the repo it deploys from. |
 
 Mac app (set when building; CI takes them from the variables above):
 

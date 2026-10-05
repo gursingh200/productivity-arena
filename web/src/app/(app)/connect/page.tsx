@@ -2,6 +2,8 @@ import { and, desc, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { devices } from "@/db/schema";
 import { requireViewer } from "@/lib/viewer";
+import Link from "next/link";
+import { DownloadButton } from "@/components/DownloadButton";
 import ConnectDevice from "./ConnectDevice";
 
 function date(d: Date) {
@@ -32,7 +34,11 @@ export default async function ConnectPage() {
       <ol className="steps">
         <li>
           <div className="step-title">Install Arena</div>
-          <p className="help">Open Arena.app once. It lives in the menu bar and starts at login.</p>
+          <p className="help">
+            Open Arena.app once. It lives in the menu bar and starts at login.{" "}
+            <Link href="/download">Install help, or let your AI install it</Link>.
+          </p>
+          <div className="pair"><DownloadButton className="btn btn-sm btn-quiet" /></div>
         </li>
         <li>
           <div className="step-title">Link it to your account</div>

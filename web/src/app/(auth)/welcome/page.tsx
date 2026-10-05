@@ -1,7 +1,9 @@
 import { redirect } from "next/navigation";
 import { BrandMark } from "@/components/BrandMark";
+import { DownloadButton } from "@/components/DownloadButton";
 import { SharingForm } from "@/components/SharingForm";
 import { firstName } from "@/components/format";
+import { downloadUrl } from "@/lib/download";
 import { shares } from "@/lib/sharing";
 import { requireViewer } from "@/lib/viewer";
 
@@ -18,7 +20,12 @@ export default async function WelcomePage() {
         Human hours private, you won’t see anyone else’s, and you won’t appear on that leaderboard.
         Nobody sees more than this, admins included. You can change it any time in Settings.
       </p>
-      <SharingForm initial={shares(viewer)} submitLabel="Continue" redirectTo="/" />
+      <SharingForm initial={shares(viewer)} submitLabel="Continue" redirectTo="/download" />
+      {downloadUrl() ? (
+        <p className="help welcome-download">
+          Want the Mac app first? <DownloadButton className="btn btn-sm btn-quiet" />
+        </p>
+      ) : null}
     </div>
   );
 }

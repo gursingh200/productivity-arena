@@ -7,6 +7,7 @@ const LINKS = [
   { href: "/", label: "Home" },
   { href: "/leaderboard", label: "Leaderboard" },
   { href: "/quests", label: "Quests" },
+  { href: "/download", label: "Download" },
 ];
 
 export function NavLinks() {

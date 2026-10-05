@@ -318,6 +318,9 @@ select.input { cursor: pointer; }
 .pair .field { align-self: stretch; }
 .pair-link { display: flex; gap: 10px; align-items: center; align-self: stretch; background: var(--bg); border: 1px solid var(--line-soft); border-radius: 999px; padding: 5px 5px 5px 16px; }
 .pair-link code { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-2); font-size: 13px; }
+.copy-text { position: relative; background: var(--panel); border: 1px solid var(--line-soft); border-radius: var(--r); }
+.copy-text pre { margin: 0; padding: 18px 20px 60px; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; font-size: 14px; line-height: 1.55; color: var(--text-2); }
+.copy-text .btn { position: absolute; right: 12px; bottom: 12px; }
 .device-row { display: flex; gap: 14px; align-items: center; padding: 14px 0; border-top: 1px solid var(--line-soft); }
 .device-row:first-child { border-top: 0; padding-top: 0; }
 .device-row:last-child { padding-bottom: 0; }
@@ -414,6 +417,7 @@ select.input { cursor: pointer; }
 .rule b { color: var(--text); font-weight: 500; }
 .welcome { width: min(560px, 100%); }
 .welcome .signin-title { font-size: 36px; }
+.welcome-download { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 20px; }
 .locked { padding: 36px 18px; display: flex; flex-direction: column; align-items: flex-start; gap: 14px; border-top: 1px solid var(--line-soft); }
 .locked p { margin: 0; color: var(--text-2); max-width: 52ch; }
 .c6 { grid-column: span 6; }
