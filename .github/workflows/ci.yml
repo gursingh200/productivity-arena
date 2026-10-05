@@ -1,0 +1,73 @@
+# Tests on every pull request and on main. Require the "web" and "mac" checks
+# in branch protection so nothing merges red.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      mac: ${{ steps.filter.outputs.mac }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            mac:
+              - 'mac/**'
+              - '.github/workflows/**'
+
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: arena
+          POSTGRES_PASSWORD: arena
+          POSTGRES_DB: arena
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U arena"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      DATABASE_URL: postgresql://arena:arena@localhost:5432/arena
+      AUTH_SECRET: ci-only-not-a-secret
+      ARENA_SECRET: "0000000000000000000000000000000000000000000000000000000000000000"
+      ALLOWED_EMAIL_DOMAIN: example.com
+      PUBLIC_BASE_URL: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:migrate
+      - run: pnpm tsc --noEmit
+      - run: pnpm lint
+      - run: pnpm test
+      - run: pnpm build
+
+  mac:
+    needs: changes
+    if: needs.changes.outputs.mac == 'true'
+    runs-on: macos-15
+    defaults:
+      run:
+        working-directory: mac
+    steps:
+      - uses: actions/checkout@v4
+      - run: swift test

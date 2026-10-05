@@ -1,0 +1,1 @@
+ALTER TABLE "daily_rollup" ADD COLUMN "meeting_apps" jsonb DEFAULT '[]'::jsonb NOT NULL;

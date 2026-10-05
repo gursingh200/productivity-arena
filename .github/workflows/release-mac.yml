@@ -1,0 +1,88 @@
+# Builds a signed Mac release whenever mac/ changes on main and publishes it as a
+# GitHub release. Every installed Arena checks the latest release hourly and
+# updates itself (mac/Sources/Arena/Updater.swift). Releases must be in a PUBLIC
+# repo: this one if it's public, or a separate releases-only repo.
+#
+# Repository variables (Settings → Secrets and variables → Actions → Variables):
+#   ARENA_UPDATE_PUBLIC_KEY  update-signing public key (from arena-sign keygen)
+#   ARENA_UPDATE_REPO        optional: owner/repo of a separate public releases repo
+#                            (default: this repo)
+#   ARENA_BUNDLE_ID          optional, e.g. com.yourorg.arena
+# Secrets:
+#   ARENA_UPDATE_SIGNING_KEY  update-signing private key (base64, from arena-sign keygen)
+#   MAC_SIGNING_P12           base64 of the release code-signing certificate (.p12)
+#   MAC_SIGNING_PASSWORD      its password
+#   RELEASES_TOKEN            only with ARENA_UPDATE_REPO: a fine-grained token with
+#                             Contents: read & write on that repo
+name: Release Mac app
+
+on:
+  push:
+    branches: [main]
+    paths: ["mac/**"]
+  workflow_dispatch:
+
+concurrency:
+  group: release-mac
+  cancel-in-progress: false
+
+permissions:
+  contents: write  # create releases in this repo
+
+jobs:
+  release:
+    if: vars.ARENA_UPDATE_PUBLIC_KEY != ''
+    runs-on: macos-15
+    env:
+      ARENA_UPDATE_REPO: ${{ vars.ARENA_UPDATE_REPO || github.repository }}
+      ARENA_UPDATE_PUBLIC_KEY: ${{ vars.ARENA_UPDATE_PUBLIC_KEY }}
+      ARENA_BUNDLE_ID: ${{ vars.ARENA_BUNDLE_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Version
+        run: |
+          echo "ARENA_VERSION=$(tr -d '[:space:]' < mac/VERSION).${{ github.run_number }}" >> "$GITHUB_ENV"
+          echo "ARENA_BUILD=${{ github.run_number }}" >> "$GITHUB_ENV"
+
+      - name: Import the release signing certificate
+        env:
+          MAC_SIGNING_P12: ${{ secrets.MAC_SIGNING_P12 }}
+          MAC_SIGNING_PASSWORD: ${{ secrets.MAC_SIGNING_PASSWORD }}
+        run: |
+          KEYCHAIN="$RUNNER_TEMP/arena-release.keychain-db"
+          KEYCHAIN_PASSWORD="$(openssl rand -hex 24)"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 3600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          echo "$MAC_SIGNING_P12" | base64 --decode > "$RUNNER_TEMP/release.p12"
+          security import "$RUNNER_TEMP/release.p12" -k "$KEYCHAIN" -P "$MAC_SIGNING_PASSWORD" -T /usr/bin/codesign
+          rm -f "$RUNNER_TEMP/release.p12"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" > /dev/null
+          security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | tr -d '"')
+          IDENTITY="$(security find-identity -p codesigning "$KEYCHAIN" | awk -F'"' '/"/ {print $2; exit}')"
+          test -n "$IDENTITY"
+          echo "ARENA_SIGN_IDENTITY=$IDENTITY" >> "$GITHUB_ENV"
+          echo "RELEASE_KEYCHAIN=$KEYCHAIN" >> "$GITHUB_ENV"
+
+      - name: Build, sign and package
+        env:
+          ARENA_UPDATE_SIGNING_KEY: ${{ secrets.ARENA_UPDATE_SIGNING_KEY }}
+        run: mac/scripts/release.sh
+
+      - name: Publish to the releases repo
+        env:
+          GH_TOKEN: ${{ secrets.RELEASES_TOKEN || github.token }}
+        run: |
+          gh release create "v$ARENA_VERSION" \
+            "mac/dist/release/Arena-$ARENA_VERSION.zip" \
+            "mac/dist/release/latest.json" \
+            --repo "$ARENA_UPDATE_REPO" \
+            --title "Arena $ARENA_VERSION" \
+            --notes "Built from ${{ github.repository }}@${{ github.sha }}." \
+            --latest
+
+      - name: Remove the temporary keychain
+        if: always()
+        run: |
+          if [ -n "${RELEASE_KEYCHAIN:-}" ]; then security delete-keychain "$RELEASE_KEYCHAIN" || true; fi

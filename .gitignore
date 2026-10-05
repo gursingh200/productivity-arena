@@ -1,0 +1,10 @@
+node_modules/
+.next/
+.build/
+*.xcuserstate
+.env
+.env.local
+dist/
+.DS_Store
+.claude/
+*.tsbuildinfo
