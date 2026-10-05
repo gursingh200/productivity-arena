@@ -4,11 +4,12 @@ import { redirect } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
 import { compact, hours, shortDay } from "@/components/format";
 import { db } from "@/db";
-import { dailyRollup, devices, xpLedger } from "@/db/schema";
+import { dailyRollup, devices, guilds, xpLedger } from "@/db/schema";
 import { weekDays } from "@/lib/standings";
 import { addDays } from "@/lib/timezone";
 import { visibility } from "@/lib/sharing";
 import { requireViewer } from "@/lib/viewer";
+import GuildManager from "./GuildManager";
 
 const WEEK = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -34,6 +35,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
   const weekEnd = addDays(week, 7);
 
   const people = await db.query.users.findMany({ with: { guild: true } });
+  const allGuilds = await db.select().from(guilds).orderBy(guilds.name);
   const time = await db.select({
     userId: dailyRollup.userId,
     human: sql<number>`SUM(${dailyRollup.humanSec})`,
@@ -128,6 +130,14 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
           </tbody>
         </table>
       </div>
+
+      <h2 className="section-label">Guilds</h2>
+      <p className="help" style={{ marginTop: -6, marginBottom: 14 }}>Each guild gets one shared quest a week. When it’s done, everyone in it with at least 1 hour that week gets the XP.</p>
+      <GuildManager
+        guilds={allGuilds.map((g) => ({ id: g.id, name: g.name, members: people.filter((p) => p.guildId === g.id).length }))}
+        people={people.map((p) => ({ id: p.id, name: p.name ?? `@${p.handle}`, guildId: p.guildId }))
+          .sort((a, b) => a.name.localeCompare(b.name))}
+      />
     </div>
   );
 }

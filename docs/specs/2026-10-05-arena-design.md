@@ -317,6 +317,8 @@ for 15 min, 100).
 
 **Guild** (1 per guild per week, pooled): e.g. "Guild: 300 agent-hours" or
 "Guild: 40 Linear issues". On completion every member with ≥ 1 h that week gets the XP.
+Admins create, rename and delete guilds and put people in them from the Team page
+(`/api/admin/guilds`, `/api/admin/members/:id/guild`); one guild per person at most.
 
 ## 6. Skills radar (last 30 days, 0–10)
 
