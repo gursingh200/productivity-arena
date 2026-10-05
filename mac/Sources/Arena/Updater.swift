@@ -1,5 +1,6 @@
 import AppKit
 import ArenaCore
+import ArenaMac
 import Foundation
 import Security
 
@@ -94,6 +95,12 @@ final class Updater {
         try Self.requireSameSigner(newApp)
 
         try install(newApp, replacing: current)
+        // Hand the Keychain secrets to the new build so it isn't asked for a password.
+        do {
+            try KeychainHandoff.prepare(directory: URL(fileURLWithPath: Store.defaultPath()).deletingLastPathComponent())
+        } catch {
+            NSLog("Arena update: Keychain handoff failed: %@", String(describing: error))
+        }
         set("Restarting into Arena \(manifest.version)…")
         relaunch(current)
     }

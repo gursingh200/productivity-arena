@@ -54,6 +54,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Secrets handed over by the build that just updated us (see KeychainHandoff).
+        KeychainHandoff.restore(directory: URL(fileURLWithPath: Store.defaultPath()).deletingLastPathComponent())
         do {
             let store = try Store(path: Store.defaultPath())
             engine = try ArenaEngine(store: store, token: Keychain.loadToken(), device: Self.deviceInfo)
