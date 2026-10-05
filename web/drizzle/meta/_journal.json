@@ -71,6 +71,13 @@
       "when": 1791205692269,
       "tag": "0009_quest_dedupe",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791208235005,
+      "tag": "0010_bug_reports",
+      "breakpoints": true
     }
   ]
 }

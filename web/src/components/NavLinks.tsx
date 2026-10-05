@@ -9,6 +9,7 @@ const LINKS = [
   { href: "/quests", label: "Quests" },
   { href: "/xp", label: "XP" },
   { href: "/download", label: "Download" },
+  { href: "/bugs", label: "Report a bug" },
 ];
 
 export function NavLinks() {

@@ -357,6 +357,22 @@ export const quests = pgTable(
   ]
 );
 
+// ─── Bug reports ──────────────────────────────────────────────────────────────
+
+export const bugReports = pgTable(
+  "bug_reports",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    description: text("description").notNull(),
+    /** Where the reporter was, e.g. "Mac app" or a page path. */
+    context: text("context"),
+    userAgent: text("user_agent"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("bug_reports_created_idx").on(table.createdAt)]
+);
+
 // ─── Linear ───────────────────────────────────────────────────────────────────
 
 export const linearAccounts = pgTable("linear_accounts", {

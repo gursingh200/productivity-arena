@@ -366,8 +366,8 @@ select.input { cursor: pointer; }
 @media (max-width: 760px) {
   .topbar { padding: 0 16px; grid-template-columns: auto 1fr auto; gap: 8px; }
   .brand span { display: none; }
-  .nav { justify-content: center; }
-  .nav a { padding: 7px 11px; font-size: 14px; }
+  .nav { justify-content: flex-start; overflow-x: auto; scrollbar-width: none; min-width: 0; }
+  .nav a { padding: 7px 11px; font-size: 14px; white-space: nowrap; }
   .page { padding: 24px 16px 72px; }
   .grid12 { gap: 14px; }
   .panel { padding: 18px; border-radius: 20px; }
