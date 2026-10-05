@@ -7,6 +7,7 @@ import ArenaMac
 final class MenuBarController: NSObject, NSMenuDelegate {
 
     var onPair: ((String) -> Void)?
+    var onConnectInBrowser: (() -> Void)?
     var onConnectLinear: ((String) -> Void)?
     var onDisconnectLinear: (() -> Void)?
     var onQuestResponse: ((String, Bool) -> Void)?
@@ -107,7 +108,11 @@ final class MenuBarController: NSObject, NSMenuDelegate {
 
     private func addProgress(to menu: NSMenu) {
         guard let user = status?.user else {
-            menu.addItem(label(engine.currentSettings().serverURL == nil ? "Not connected — paste a pairing link below" : "Waiting for first sync…"))
+            if engine.currentSettings().serverURL == nil {
+                menu.addItem(action("Connect to Arena…") { [weak self] in self?.onConnectInBrowser?() })
+            } else {
+                menu.addItem(label("Waiting for first sync…"))
+            }
             return
         }
         if let level = user.level {
@@ -238,6 +243,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         let item = NSMenuItem(title: "Connection", action: nil, keyEquivalent: "")
         let sub = NSMenu()
         sub.addItem(label(settings.serverURL.map { "Server: \($0.host ?? $0.absoluteString)" } ?? "Not connected"))
+        sub.addItem(action("Connect to Arena…") { [weak self] in self?.onConnectInBrowser?() })
         sub.addItem(action("Paste Pairing Link…") { [weak self] in self?.askForPairingLink() })
         if let onCheckForUpdates {
             sub.addItem(action("Check for Updates") { onCheckForUpdates() })
@@ -273,6 +279,28 @@ final class MenuBarController: NSObject, NSMenuDelegate {
             let key = field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
             if !key.isEmpty { onConnectLinear?(key) }
         }
+    }
+
+    /// For builds without a built-in website: asks for its address.
+    func askForServerAddress() -> URL? {
+        NSApp.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.messageText = "Connect to Arena"
+        alert.informativeText = "Enter your team’s Arena website address."
+        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 360, height: 24))
+        field.placeholderString = "https://arena.example.com"
+        alert.accessoryView = field
+        alert.addButton(withTitle: "Continue")
+        alert.addButton(withTitle: "Cancel")
+        alert.window.initialFirstResponder = field
+        guard alert.runModal() == .alertFirstButtonReturn else { return nil }
+        var text = field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !text.contains("://") { text = "https://" + text }
+        guard let url = URL(string: text), url.scheme == "https" || url.scheme == "http", url.host != nil else {
+            showMessage("That isn’t a website address.")
+            return nil
+        }
+        return url
     }
 
     private func askForPairingLink() {

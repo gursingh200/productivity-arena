@@ -28,7 +28,7 @@ Copies never talk to each other. If you were given this repository, don't point 
 | Mac updates | GitHub Releases in a **public** repo: your copy if it's public, or a separate releases-only repo | Free |
 | Sign-in | A Google OAuth client | Free |
 
-Releases must be public so Macs can download updates without a password. The code and the built app contain no server address, keys or data, so publishing them is safe. Nobody can use them to reach your server: sign-in is limited to your people, and the Mac app can only upload with a device token that one of your signed-in members created. Your keys live only in your repo's GitHub secrets.
+Releases must be public so Macs can download updates without a password. The code and the built app contain no keys or data (only your web app's address, if you set `ARENA_SERVER_URL`), so publishing them is safe. Nobody can use them to reach your server: sign-in is limited to your people, and the Mac app can only upload with a device token that one of your signed-in members created. Your keys live only in your repo's GitHub secrets.
 
 ## Setup
 
@@ -68,6 +68,7 @@ Every merge to `main` that changes `mac/` builds a signed release. Every install
    |---|---|---|
    | Variable | `ARENA_UPDATE_PUBLIC_KEY` | The public key printed by `arena-sign keygen` |
    | Variable | `ARENA_BUNDLE_ID` | Optional, e.g. `com.yourname.arena` |
+   | Variable | `ARENA_SERVER_URL` | Optional: your web app's address. **Connect to Arena…** then opens it directly; without it, people type the address once. |
    | Secret | `ARENA_UPDATE_SIGNING_KEY` | Contents of `~/.arena/update-signing.key` |
    | Secret | `MAC_SIGNING_P12` | `base64 -i ~/.arena/release-signing.p12` |
    | Secret | `MAC_SIGNING_PASSWORD` | Contents of `~/.arena/release-signing.password` |
@@ -81,7 +82,7 @@ Every merge to `main` that changes `mac/` builds a signed release. Every install
 1. Send them your web app's address. Its **Download** page links to the newest Arena.dmg and has a prompt they can paste into their coding agent to install it.
 2. They open **Arena.dmg** and drag **Arena** into Applications.
 3. The first open is blocked because the app isn't notarized by Apple. They go to **System Settings → Privacy & Security** and click **Open Anyway**. This happens only once; updates install without it. An Apple Developer ID ($99/year) removes this step.
-4. They sign in on the web app, choose what to share, open **Connect a Mac** and click **Open in Arena**.
+4. They sign in on the web app and choose what to share. Then, in Arena's menu bar, **Connect to Arena…** opens the site; one click on **Connect this Mac** links it. (Or **Connect a Mac** on the site, then **Open in Arena**.)
 
 ## What Arena collects
 
@@ -109,6 +110,7 @@ Mac app (set when building; CI takes them from the variables above):
 |---|---|
 | `ARENA_UPDATE_REPO`, `ARENA_UPDATE_PUBLIC_KEY` | Where updates come from and the key they must be signed with. Unset means no auto-updates (local builds). |
 | `ARENA_BUNDLE_ID` | The app's identifier |
+| `ARENA_SERVER_URL` | The web app **Connect to Arena…** opens |
 | `ARENA_VERSION`, `ARENA_BUILD` | Set by CI from `mac/VERSION` and the run number |
 
 ## Developing locally

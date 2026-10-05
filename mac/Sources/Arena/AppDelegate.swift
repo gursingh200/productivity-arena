@@ -65,6 +65,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         menuBar = MenuBarController(engine: engine, frontApp: frontApp)
         menuBar.onPair = { [weak self] link in self?.pair(with: link) }
+        menuBar.onConnectInBrowser = { [weak self] in self?.connectInBrowser() }
         menuBar.onConnectLinear = { [weak self] key in self?.connectLinear(key) }
         menuBar.onDisconnectLinear = { [weak self] in self?.disconnectLinear() }
         engine.linearKey = Keychain.loadLinearKey()
@@ -224,10 +225,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         pair(with: string)
     }
 
+    /// The one-time value of a pairing this Mac started; nil when none is pending.
+    private var pendingPairState: String?
+
+    /// "Connect to Arena…": opens the website, which sends back a pairing link.
+    private func connectInBrowser() {
+        guard let server = PairingRequest.builtInServer(Bundle.main.infoDictionary) ?? engine.currentSettings().serverURL
+                ?? menuBar.askForServerAddress() else { return }
+        let state = PairingRequest.newState()
+        guard let url = PairingRequest.connectURL(server: server, state: state, deviceName: Self.deviceInfo(id: "").name) else {
+            menuBar.showMessage("That isn't a valid website address.")
+            return
+        }
+        pendingPairState = state
+        NSWorkspace.shared.open(url)
+    }
+
     private func pair(with string: String) {
         guard let link = PairingLink(string) else {
             menuBar.showMessage("That isn't a valid Arena pairing link.")
             return
+        }
+        // A link from "Connect to Arena…" must answer the request this Mac made.
+        if let state = link.state {
+            guard state == pendingPairState else {
+                menuBar.showMessage("That connection wasn’t started from this Mac. Choose Connect to Arena… and try again.")
+                return
+            }
+            pendingPairState = nil
         }
         Keychain.saveToken(link.token)
         engine.setToken(link.token)

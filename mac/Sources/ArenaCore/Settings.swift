@@ -54,6 +54,9 @@ public struct ArenaSettings: Equatable {
 public struct PairingLink: Equatable {
     public var server: URL
     public var token: String
+    /// Set when the Mac started the pairing ("Connect to Arena…"): the value it
+    /// sent the website, which must come back unchanged.
+    public var state: String?
 
     public init?(_ string: String) {
         guard let components = URLComponents(string: string.trimmingCharacters(in: .whitespacesAndNewlines)),
@@ -64,5 +67,26 @@ public struct PairingLink: Equatable {
         else { return nil }
         self.server = server
         self.token = token
+        self.state = components.queryItems?.first(where: { $0.name == "state" })?.value
+    }
+}
+
+/// Starting a pairing from the Mac: it opens the website's connect page with a
+/// one-time value, and accepts the pairing link that comes back only if it
+/// carries the same value.
+public enum PairingRequest {
+    public static func newState() -> String {
+        (0..<16).map { _ in String(format: "%02x", UInt8.random(in: 0...255)) }.joined()
+    }
+
+    public static func connectURL(server: URL, state: String, deviceName: String) -> URL? {
+        guard var components = URLComponents(url: server.appendingPathComponent("connect/mac"), resolvingAgainstBaseURL: false) else { return nil }
+        components.queryItems = [URLQueryItem(name: "state", value: state), URLQueryItem(name: "name", value: deviceName)]
+        return components.url
+    }
+
+    /// The website from the build (ARENA_SERVER_URL), if any.
+    public static func builtInServer(_ info: [String: Any]?) -> URL? {
+        (info?["ArenaServerURL"] as? String).flatMap(URL.init(string:))
     }
 }

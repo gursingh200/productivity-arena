@@ -353,3 +353,19 @@ struct MenuQuestTests {
         #expect(QuestStatus.forMenu(quests.filter { $0.state == "active" }).active.map(\.id) == ["b", "c", "a"])
     }
 }
+
+struct PairingRequestTests {
+    @Test func connectURLCarriesStateAndName() throws {
+        let url = try #require(PairingRequest.connectURL(server: URL(string: "https://arena.example.com")!, state: "ab12", deviceName: "Ana’s Mac"))
+        let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+        #expect(url.path == "/connect/mac")
+        #expect(items.first { $0.name == "state" }?.value == "ab12")
+        #expect(items.first { $0.name == "name" }?.value == "Ana’s Mac")
+    }
+
+    @Test func pairingLinkReadsState() {
+        #expect(PairingLink("arena://pair?server=https%3A%2F%2Fa.example.com&token=t&state=ab12")?.state == "ab12")
+        #expect(PairingLink("arena://pair?server=https%3A%2F%2Fa.example.com&token=t")?.state == nil)
+        #expect(PairingRequest.newState().count == 32)
+    }
+}

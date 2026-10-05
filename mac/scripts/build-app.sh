@@ -20,6 +20,8 @@ RESOURCES_DIR="$CONTENTS_DIR/Resources"
 #                            the app updates itself. Without both, updates are off.
 #   ARENA_UPDATE_BASE_URL    only for testing against a local server
 #   ARENA_SIGN_IDENTITY      code-signing identity (see "Code signing" below)
+#   ARENA_SERVER_URL         your Arena website, e.g. https://arena.example.com; lets
+#                            "Connect to Arena…" open it without asking for the address
 BUNDLE_ID="${ARENA_BUNDLE_ID:-io.clueso.arena}"
 APP_VERSION="${ARENA_VERSION:-0.1.0}"
 APP_BUILD="${ARENA_BUILD:-1}"
@@ -92,6 +94,12 @@ cat > "$CONTENTS_DIR/Info.plist" << PLIST
 </dict>
 </plist>
 PLIST
+
+# The website "Connect to Arena…" opens.
+if [ -n "${ARENA_SERVER_URL:-}" ]; then
+  [[ "$ARENA_SERVER_URL" =~ ^https?://[A-Za-z0-9.:-]+/?$ ]] || { echo "ARENA_SERVER_URL must be like https://arena.example.com" >&2; exit 1; }
+  /usr/libexec/PlistBuddy -c "Add :ArenaServerURL string ${ARENA_SERVER_URL%/}" "$CONTENTS_DIR/Info.plist"
+fi
 
 # Self-update settings (see Sources/Arena/Updater.swift).
 if [ -n "$UPDATE_REPO" ]; then

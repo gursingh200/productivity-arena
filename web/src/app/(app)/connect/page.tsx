@@ -42,6 +42,7 @@ export default async function ConnectPage() {
         </li>
         <li>
           <div className="step-title">Link it to your account</div>
+          <p className="help">Easiest: in Arena’s menu bar, choose Connect to Arena… and click Connect on the page it opens. Or create a link here.</p>
           <ConnectDevice />
         </li>
       </ol>

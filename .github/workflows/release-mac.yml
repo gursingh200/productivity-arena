@@ -37,6 +37,7 @@ jobs:
       ARENA_UPDATE_REPO: ${{ vars.ARENA_UPDATE_REPO || github.repository }}
       ARENA_UPDATE_PUBLIC_KEY: ${{ vars.ARENA_UPDATE_PUBLIC_KEY }}
       ARENA_BUNDLE_ID: ${{ vars.ARENA_BUNDLE_ID }}
+      ARENA_SERVER_URL: ${{ vars.ARENA_SERVER_URL }}
     steps:
       - uses: actions/checkout@v4
 

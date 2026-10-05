@@ -196,6 +196,13 @@ that minute, so past data can't be rewritten. A device can only ever write its o
 user's data. Then recompute `daily_rollup` + derived XP for
 touched days, evaluate quests, return status. Idempotent; safe to resend.
 
+**Pairing from the Mac.** "Connect to Arena…" opens `<site>/connect/mac?state=<32 hex>&name=<Mac>`
+(the site comes from the build's `ARENA_SERVER_URL`, else the current server, else
+the person types it). After sign-in, one click creates a device token and sends the
+browser to `arena://pair?server=…&token=…&state=…`. The Mac accepts a link with a
+`state` only if it matches the one it just sent; pasted links without `state` work
+as before.
+
 **Pairing again.** After pairing, the Mac resends its last 24 hours, so a new
 server (or a new pairing with the same one) gets the whole day. Each upload carries
 the Mac's stable id (`devices.client_id`). On ingest, an earlier pairing of the same
