@@ -1,9 +1,15 @@
-/** Arena mark: a flame inside a ring. */
+/** Arena mark: the Clueso mark in Arena's ember colours (same as the favicon). */
 export function BrandMark({ size = 22 }: { size?: number }) {
   return (
-    <svg className="brand-mark" width={size} height={size} viewBox="0 0 24 24" aria-hidden>
-      <circle cx="12" cy="12" r="10.5" fill="none" stroke="var(--human)" strokeWidth="2" />
-      <path d="M12 5.5c.4 2.3 2.9 3.6 2.9 6.6a2.9 2.9 0 0 1-5.8 0c0-1.3.6-2.1 1.3-2.8.2 1 .8 1.6 1.4 1.8-.4-2 .1-3.9.2-5.6Z" fill="var(--human)" />
+    <svg className="brand-mark" width={size} height={size} viewBox="0 0 52 52" aria-hidden>
+      <defs>
+        <linearGradient id="arena-mark-ember" x1="56.16" y1="-4.16" x2="-7.54" y2="59.54" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#FFB36B" />
+          <stop offset="1" stopColor="#D4521C" />
+        </linearGradient>
+      </defs>
+      <path fillRule="evenodd" clipRule="evenodd" fill="url(#arena-mark-ember)"
+        d="M50.44 0C51.3016 0 52 0.698435 52 1.56V14.0762C52 15.0028 50.8798 15.4668 50.2246 14.8116L37.1884 1.77539C36.5332 1.12023 36.9972 0 37.9238 0H50.44ZM19.539 1.77539C18.8838 1.12023 19.3478 0 20.2744 0H27.0191C27.2949 0 27.5594 0.109572 27.7545 0.30461L51.6954 24.2455C51.8904 24.4406 52 24.7051 52 24.9809V31.7256C52 32.6522 50.8798 33.1162 50.2246 32.461L19.539 1.77539ZM10.1051 0.304609C9.91004 0.109571 9.64551 0 9.36968 0H1.56C0.698436 0 0 0.698434 0 1.56V15.6C0 16.1744 0.465623 16.64 1.04 16.64H3.12C8.28939 16.64 12.48 20.8306 12.48 26C12.48 31.1694 8.28939 35.36 3.12 35.36H1.04C0.465624 35.36 0 35.8256 0 36.4V50.44C0 51.3016 0.698434 52 1.56 52H15.6C16.1744 52 16.64 51.5344 16.64 50.96V48.88C16.64 43.7106 20.8306 39.52 26 39.52C31.1694 39.52 35.36 43.7106 35.36 48.88V50.96C35.36 51.5344 35.8256 52 36.4 52H50.44C51.3016 52 52 51.3016 52 50.44V42.6303C52 42.3545 51.8904 42.09 51.6954 41.8949L10.1051 0.304609Z" />
     </svg>
   );
 }
