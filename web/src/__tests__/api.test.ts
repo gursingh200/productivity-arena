@@ -102,6 +102,10 @@ describe.skipIf(!DB_URL)("device API", async () => {
       expect(await db.query.linearAccounts.findFirst({ where: eq(schema.linearAccounts.userId, userId) })).toBeUndefined();
     });
 
+    it("accepts issues with no estimate or completion left out (as older Macs send them)", async () => {
+      expect((await send({ issues: [{ id: "lin-2", identifier: "ENG-2" }] })).status).toBe(200);
+    });
+
     it("ignores completions in the future", async () => {
       await send({ issues: [issue(new Date(Date.now() + 86_400_000).toISOString())] });
       expect(await linearXp()).toBe(0);

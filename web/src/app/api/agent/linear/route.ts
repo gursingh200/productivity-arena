@@ -7,8 +7,9 @@ const Body = z.object({
   issues: z.array(z.object({
     id: z.string().min(1).max(64),
     identifier: z.string().min(1).max(32),
-    estimate: z.number().min(0).max(100).nullable(),
-    completedAt: z.string().datetime({ offset: true }).nullable(),
+    // The Mac may leave either out instead of sending null.
+    estimate: z.number().min(0).max(100).nullish().transform((v) => v ?? null),
+    completedAt: z.string().datetime({ offset: true }).nullish().transform((v) => v ?? null),
   }).strict()).max(500),
 }).strict();
 
