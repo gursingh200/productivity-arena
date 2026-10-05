@@ -38,3 +38,32 @@ export function installPrompt(dmg: string, site: string): string {
     `When Arena's flame icon is in the menu bar, tell me to go to ${site}/connect and click Open in Arena to link it to my account.`,
   ].join("\n");
 }
+
+export interface LatestRelease {
+  version: string;
+  build: number;
+}
+
+/** The newest Mac release, from its latest.json; cached for 10 minutes. Null if unknown. */
+export async function latestRelease(): Promise<LatestRelease | null> {
+  const repo = releasesRepo();
+  if (!repo) return null;
+  try {
+    const res = await fetch(`https://github.com/${repo}/releases/latest/download/latest.json`, { next: { revalidate: 600 } });
+    if (!res.ok) return null;
+    const json = (await res.json()) as Partial<LatestRelease>;
+    return typeof json.version === "string" && typeof json.build === "number" ? { version: json.version, build: json.build } : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Compares dotted versions ("0.1.10" > "0.1.9"). */
+export function isOlderVersion(installed: string, latest: string): boolean {
+  const a = installed.split(".").map((n) => Number.parseInt(n, 10) || 0);
+  const b = latest.split(".").map((n) => Number.parseInt(n, 10) || 0);
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    if ((a[i] ?? 0) !== (b[i] ?? 0)) return (a[i] ?? 0) < (b[i] ?? 0);
+  }
+  return false;
+}

@@ -14,10 +14,10 @@ import Security
 final class Updater {
 
     static let checkInterval: TimeInterval = 3600
-    static let firstCheckDelay: TimeInterval = 30
+    static let firstCheckDelay: TimeInterval = 5
 
     /// One line for the menu, e.g. "Up to date (checked 10:42)".
-    private(set) var status = "Not checked yet"
+    private(set) var status = "Checking for updates…"
     var onChange: (() -> Void)?
 
     private let config: UpdateConfig

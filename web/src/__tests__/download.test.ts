@@ -30,3 +30,12 @@ describe("Mac download link", () => {
     expect(prompt).toContain("https://arena.acme.com/connect");
   });
 });
+
+describe("version comparison", () => {
+  it("compares numerically, not as text", async () => {
+    const { isOlderVersion } = await import("@/lib/download");
+    expect(isOlderVersion("0.1.9", "0.1.10")).toBe(true);
+    expect(isOlderVersion("0.1.8", "0.1.8")).toBe(false);
+    expect(isOlderVersion("0.2", "0.1.9")).toBe(false);
+  });
+});
