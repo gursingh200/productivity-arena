@@ -32,3 +32,10 @@ import Testing
         #expect(LinearAPI.since(lastSync: now, now: now) == now.addingTimeInterval(-86_400))
     }
 }
+
+@Suite struct LinearEncodingTests {
+    @Test func sendsEmptyFieldsAsNull() throws {
+        let json = String(decoding: try JSONEncoder().encode(LinearIssue(id: "a", identifier: "ENG-1", estimate: nil, completedAt: nil)), as: UTF8.self)
+        #expect(json.contains("\"completedAt\":null") && json.contains("\"estimate\":null"))
+    }
+}

@@ -172,6 +172,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
         let previous = engine.linearKey
+        // Keys are lin_api_ plus letters and digits; drop anything pasted around one.
+        let key = key.components(separatedBy: .whitespacesAndNewlines).joined()
         engine.setLinearKey(key)
         Task { @MainActor [weak self] in
             guard let self else { return }
@@ -182,9 +184,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             } catch LinearError.badKey {
                 self.engine.setLinearKey(previous)
                 self.menuBar.showMessage("Linear didn’t accept that key. Copy a fresh personal API key from Linear and try again.")
+            } catch LinearError.unavailable {
+                self.engine.setLinearKey(previous)
+                self.menuBar.showMessage("Couldn’t reach Linear. Check your internet connection and try again.")
             } catch {
                 self.engine.setLinearKey(previous)
-                self.menuBar.showMessage("Couldn’t reach Linear or Arena. Check your connection and try again.")
+                self.menuBar.showMessage("Linear accepted the key, but Arena couldn’t save your issues (\(error)). Try again, or report a bug from the Arena website.")
             }
         }
     }

@@ -7,10 +7,22 @@ public struct LinearIssue: Codable, Equatable, Sendable {
     public let estimate: Double?
     /// ISO 8601; set only while the issue is completed.
     public let completedAt: String?
+
+    private enum CodingKeys: String, CodingKey { case id, identifier, estimate, completedAt }
+
+    /// Writes empty fields as null rather than leaving them out.
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(identifier, forKey: .identifier)
+        try c.encode(estimate, forKey: .estimate)
+        try c.encode(completedAt, forKey: .completedAt)
+    }
 }
 
 public enum LinearError: Error, Equatable {
     case badKey
+    /// Linear couldn't be reached or answered with something unexpected.
     case unavailable
 }
 
