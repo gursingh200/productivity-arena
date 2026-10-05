@@ -32,11 +32,21 @@ export interface FocusXpResult {
   activeMinutes: number;
 }
 
+/** Focus XP per active minute for the first 8 hours of the day. */
+export const FOCUS_XP_PER_MIN = 1;
+/** Active minutes at the full rate; minutes after that earn half. */
+export const FOCUS_FULL_RATE_MIN = 8 * 60;
+export const FOCUS_LATE_XP_PER_MIN = 0.5;
+/** Active minutes past 10 hours earn no focus XP. */
+export const FOCUS_CAP_MIN = 10 * 60;
+export const FOCUS_BLOCK_XP = 15;
+
 /**
  * Compute focus XP from an array of minute rows for a single day.
  *
- * A minute is "active" if humanSec >= 30.
- * Base: 1 XP per active minute up to 480; 0.5 XP per minute beyond 480.
+ * A minute is active if it has any human or call time (see activity.ts).
+ * Base: 1 XP per active minute up to 8 h, 0.5 XP per minute from 8 h to 10 h,
+ *   nothing beyond 10 h.
  * Block bonus: +15 XP per block of ≥ 25 contiguous active minutes
  *   (gaps of ≤ 2 inactive minutes are allowed within a block).
  */
@@ -50,10 +60,13 @@ export function computeFocusXp(minutes: MinuteRow[]): FocusXpResult {
     return { xp: 0, reason: "No activity", blocks: 0, longestBlockSec: 0, activeMinutes: 0 };
   }
 
-  const baseXp = Math.min(activeMinutes, 480) + Math.max(0, activeMinutes - 480) * 0.5;
-  const blockBonus = qualifying.length * 15;
+  const counted = Math.min(activeMinutes, FOCUS_CAP_MIN);
+  const baseXp = Math.min(counted, FOCUS_FULL_RATE_MIN) * FOCUS_XP_PER_MIN
+    + Math.max(0, counted - FOCUS_FULL_RATE_MIN) * FOCUS_LATE_XP_PER_MIN;
+  const blockBonus = qualifying.length * FOCUS_BLOCK_XP;
   const blocksText = qualifying.length === 1 ? "1 focus block" : `${qualifying.length} focus blocks`;
-  const reason = `${activeMinutes} active minutes${qualifying.length > 0 ? `, ${blocksText}` : ""}`;
+  const reason = `${activeMinutes} active minutes${qualifying.length > 0 ? `, ${blocksText}` : ""}` +
+    (activeMinutes > FOCUS_CAP_MIN ? ` (time past ${FOCUS_CAP_MIN / 60} h earns no XP)` : "");
 
   return { xp: baseXp + blockBonus, reason, blocks: qualifying.length, longestBlockSec, activeMinutes };
 }
@@ -67,22 +80,24 @@ export interface AgentXpResult {
   reason: string;
 }
 
-const AGENT_XP_CAP = 300;
+export const AGENT_XP_PER_MIN = 0.25;
+/** Agent-minutes past 24 hours a day (summed over parallel agents) earn no XP. */
+export const AGENT_CAP_MIN = 24 * 60;
+export const AGENT_XP_CAP = AGENT_CAP_MIN * AGENT_XP_PER_MIN;
 
 /**
  * Compute agent XP from an array of minute rows for a single day.
  *
- * 0.25 XP per agent-minute (agentSec / 60 rounded to whole minutes).
- * Cap: 300 XP/day.
+ * 0.25 XP per agent-minute (agentSec / 60 rounded to whole minutes), up to
+ * 24 agent-hours a day: 360 XP.
  */
 export function computeAgentXp(minutes: MinuteRow[]): AgentXpResult {
   const totalAgentSec = minutes.reduce((sum, r) => sum + r.agentSec, 0);
   const agentMinutes = Math.round(totalAgentSec / 60);
-  const rawXp = agentMinutes * 0.25;
-  const xp = Math.min(rawXp, AGENT_XP_CAP);
-  const capped = rawXp > AGENT_XP_CAP;
+  const xp = Math.min(agentMinutes, AGENT_CAP_MIN) * AGENT_XP_PER_MIN;
+  const capped = agentMinutes > AGENT_CAP_MIN;
 
-  const reason = `${agentMinutes} agent-minutes${capped ? ` (daily cap of ${AGENT_XP_CAP} XP)` : ""}`;
+  const reason = `${agentMinutes} agent-minutes${capped ? ` (time past ${AGENT_CAP_MIN / 60} agent-hours earns no XP)` : ""}`;
   return { xp, reason };
 }
 
@@ -95,14 +110,16 @@ export interface OrchestrationXpResult {
   reason: string;
 }
 
-const ORCHESTRATION_XP_CAP = 150;
+export const ORCHESTRATION_XP_PER_MIN = 0.5;
+export const ORCHESTRATION_XP_CAP = 150;
+export const ORCHESTRATION_WINDOW_MIN = 5;
 
 /**
  * Compute orchestration XP from an array of minute rows for a single day.
  *
  * A minute qualifies if:
  *   - peak >= 2 (multiple concurrent agents)
- *   - a human-active minute (humanSec >= 30) exists within ±5 min of it
+ *   - an active minute (any human or call time) exists within ±5 min of it
  *
  * 0.5 XP per qualifying minute. Cap: 150 XP/day.
  */
@@ -122,7 +139,7 @@ export function computeOrchestrationXp(minutes: MinuteRow[]): OrchestrationXpRes
     const minuteIdx = minuteIndex(r.t);
     // Check ±5 min window for human activity
     let humanNearby = false;
-    for (let offset = -5; offset <= 5; offset++) {
+    for (let offset = -ORCHESTRATION_WINDOW_MIN; offset <= ORCHESTRATION_WINDOW_MIN; offset++) {
       if (activeHumanIndices.has(minuteIdx + offset)) {
         humanNearby = true;
         break;
@@ -131,7 +148,7 @@ export function computeOrchestrationXp(minutes: MinuteRow[]): OrchestrationXpRes
     if (humanNearby) qualifyingMinutes++;
   }
 
-  const rawXp = qualifyingMinutes * 0.5;
+  const rawXp = qualifyingMinutes * ORCHESTRATION_XP_PER_MIN;
   const xp = Math.min(rawXp, ORCHESTRATION_XP_CAP);
   const capped = rawXp > ORCHESTRATION_XP_CAP;
 
@@ -161,6 +178,8 @@ export interface LinearXpRow {
 }
 
 export const LINEAR_XP_CAP_PER_DAY = 400;
+export const LINEAR_XP_BASE = 20;
+export const LINEAR_XP_PER_POINT = 15;
 
 /**
  * XP for completed Linear issues: 20 + 15 × estimate (missing estimate = 1).
@@ -180,7 +199,7 @@ export function computeLinearXp(
 
   const results: LinearXpRow[] = [];
   for (const [day, dayIssues] of byDay) {
-    const raw = dayIssues.map((i) => 20 + 15 * (i.estimate ?? 1));
+    const raw = dayIssues.map((i) => LINEAR_XP_BASE + LINEAR_XP_PER_POINT * (i.estimate ?? 1));
     const total = raw.reduce((s, x) => s + x, 0);
     const scale = total > LINEAR_XP_CAP_PER_DAY ? LINEAR_XP_CAP_PER_DAY / total : 1;
     dayIssues.forEach((issue, i) => {

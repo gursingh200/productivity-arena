@@ -93,6 +93,16 @@ describe("computeFocusXp", () => {
     expect(result.xp).toBe(480.5);
   });
 
+  it("stops counting active minutes after 10 hours", () => {
+    // 30 runs of 24 minutes = 720 active minutes, no blocks.
+    const rows: MinuteRow[] = [];
+    for (let i = 0; i < 30; i++) rows.push(...activeRange(i * 50, i * 50 + 24));
+    const result = computeFocusXp(rows);
+    expect(result.activeMinutes).toBe(720);
+    expect(result.xp).toBe(480 + 120 * 0.5); // 8 h at 1 XP, 8–10 h at 0.5, nothing after
+    expect(result.reason).toContain("past 10 h");
+  });
+
   it("awards +15 block bonus for a block of exactly 25 contiguous active minutes", () => {
     const rows = activeRange(0, 25);
     const result = computeFocusXp(rows);
@@ -161,11 +171,12 @@ describe("computeAgentXp", () => {
     expect(result.xp).toBeCloseTo(5);
   });
 
-  it("caps agent XP at 300 per day", () => {
-    // 300 XP cap requires 1200 agent-minutes = 72000 agentSec
-    const rows = [row(0, { agentSec: 72_000 }), row(1, { agentSec: 72_000 })];
-    const result = computeAgentXp(rows);
-    expect(result.xp).toBe(300);
+  it("counts at most 24 agent-hours a day (360 XP)", () => {
+    // 23 h earns in full; 40 h stops at 24 h.
+    expect(computeAgentXp([row(0, { agentSec: 23 * 3600 })]).xp).toBe(345);
+    const result = computeAgentXp([row(0, { agentSec: 20 * 3600 }), row(1, { agentSec: 20 * 3600 })]);
+    expect(result.xp).toBe(360);
+    expect(result.reason).toContain("past 24 agent-hours");
   });
 
   it("rounds agentSec to whole minutes before computing XP", () => {

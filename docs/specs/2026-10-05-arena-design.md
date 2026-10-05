@@ -251,12 +251,14 @@ Derived rows (focus/agent/orchestration) are recomputed per day idempotently.
 
 | Source | Rule | Cap |
 |---|---|---|
-| Focus | 1 XP per active minute: any human or call time in it (focus time, §1.1) | Minutes beyond 8 h/day earn 0.5 XP |
+| Focus | 1 XP per active minute: any human or call time in it (focus time, §1.1) | 8–10 h/day earn 0.5 XP; nothing past 10 h (max 540 XP/day) |
 | Focus block bonus | +15 XP per block of ≥ 25 contiguous active minutes (gaps ≤ 2 min) | — |
-| Agent | 0.25 XP per agent-minute (summed over parallel sessions) | 300 XP/day |
+| Agent | 0.25 XP per agent-minute (summed over parallel sessions) | 24 agent-hours/day (360 XP/day) |
 | Orchestration | +0.5 XP per minute where ≥ 2 agents ran **and** the human was active within ±5 min | 150 XP/day |
 | Linear | 20 + 15 × estimate (missing estimate = 1) per completed issue assigned to you | 400 XP/day; reopened → reversal row |
 | Quests | quest's `xp` on completion | — |
+
+The `/xp` page lists these rules, quests, levels and leagues from the same constants.
 
 Levels: XP needed to go from level n to n+1 = `100 + 20n`. Level and progress are
 derived from total XP.
