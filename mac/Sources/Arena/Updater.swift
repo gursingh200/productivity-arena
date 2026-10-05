@@ -145,6 +145,10 @@ final class Updater {
             try? fm.moveItem(at: aside, to: current)
             throw error
         }
+        // Same path, new contents: tell Launch Services, so Finder, the Dock and
+        // launchers like Raycast pick up a changed icon instead of a cached one.
+        try? fm.setAttributes([.modificationDate: Date()], ofItemAtPath: current.path)
+        LSRegisterURL(current as CFURL, true)
     }
 
     /// Opens the new bundle once this process has exited, then quits.
