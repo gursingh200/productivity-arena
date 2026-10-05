@@ -7,6 +7,7 @@ import { db } from "@/db";
 import { dailyRollup, linearIssues, minuteAgent, minuteApp, minuteMeeting, users, xpLedger } from "@/db/schema";
 import { loadMinuteRows } from "@/lib/game/minutes-db";
 import { evaluateQuests } from "@/lib/quest-db";
+import { beforeStart } from "@/lib/start-date";
 import { dayBounds, toUserDay } from "@/lib/timezone";
 import { computeAgentXp, computeFocusXp, computeLinearXp, computeOrchestrationXp } from "@/lib/xp-engine";
 
@@ -126,6 +127,7 @@ export async function recomputeLinearXp(userId: string, day: string, timezone: s
 }
 
 async function upsertXp(userId: string, day: string, source: XpSource, sourceKey: string, xp: number, reason: string) {
+  if (beforeStart(day)) return; // Nothing before ARENA_START_DATE earns XP.
   const rounded = Math.round(xp);
   await db.insert(xpLedger)
     .values({ userId, day, source, sourceKey, xp: rounded, reason, rulesVersion: 1 })

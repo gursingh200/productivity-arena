@@ -7,6 +7,7 @@ import { IngestPayloadSchema, MAX_CHATS, MAX_MINUTES } from "@/lib/ingest-schema
 import { adoptEarlierPairings } from "@/lib/device-merge";
 import { ingestCutoff, lockedMinutes, pruneMinutes } from "@/lib/retention";
 import { recomputeForDays } from "@/lib/rollup";
+import { startInstant } from "@/lib/start-date";
 import { buildStatusPayload } from "@/lib/status";
 import { toUserDay } from "@/lib/timezone";
 
@@ -57,7 +58,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   const now = new Date();
   const cutoff = ingestCutoff(now);
-  const recent = payload.minutes.filter((m) => new Date(m.t) >= cutoff);
+  // Nothing before ARENA_START_DATE counts.
+  const start = startInstant();
+  const earliest = start && start > cutoff ? start : cutoff;
+  const recent = payload.minutes.filter((m) => new Date(m.t) >= earliest);
   const locked = await lockedMinutes(auth.deviceId, recent.map((m) => new Date(m.t)), now);
   const minutes = recent.filter((m) => !locked.has(new Date(m.t).getTime()));
 
@@ -111,8 +115,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       await tx.delete(chats).where(and(eq(chats.deviceId, auth.deviceId), inArray(chats.chatId, payload.deletedChats)));
     }
 
-    for (let i = 0; i < payload.chats.length; i += 200) {
-      const batch = payload.chats.slice(i, i + 200);
+    const keptChats = start ? payload.chats.filter((c) => new Date(c.lastAt) >= start) : payload.chats;
+    for (let i = 0; i < keptChats.length; i += 200) {
+      const batch = keptChats.slice(i, i + 200);
       await tx.insert(chats)
         .values(batch.map((c) => ({
           userId: auth.userId, deviceId: auth.deviceId, agent: c.agent, chatId: c.chatId,

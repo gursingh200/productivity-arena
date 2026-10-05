@@ -68,6 +68,7 @@ for 7 days is paused (data kept; restore it from the dashboard).
 | `ALLOWED_EMAILS` | Optional comma-separated addresses, for people outside a Workspace (e.g. friends' Gmail accounts) |
 | `PUBLIC_BASE_URL` | `https://<your-app>.vercel.app` (used in Mac pairing links) |
 | `ARENA_TIMEZONE` | The company's timezone for weeks, e.g. `Asia/Kolkata` |
+| `ARENA_START_DATE` | Optional launch day, `YYYY-MM-DD`: data before it is ignored and deleted on deploy |
 | `ARENA_RELEASES_REPO` | Optional: `owner/repo` with Mac releases, if not the repo Vercel deploys from |
 
 Don't set `ARENA_DEV_LOGIN` in production: it enables passwordless email login.

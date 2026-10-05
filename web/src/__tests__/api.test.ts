@@ -142,6 +142,22 @@ describe.skipIf(!DB_URL)("device API", async () => {
     expect(open.filter((q) => q.kind === "weekly")).toHaveLength(3);
   });
 
+  it("ignores minutes from before ARENA_START_DATE", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    process.env.ARENA_START_DATE = today;
+    process.env.ARENA_TIMEZONE = "UTC";
+    try {
+      const yesterday = new Date(Date.parse(today) - 3600_000).toISOString().replace(".000Z", "Z");
+      const minute = (t: string) => ({ t, apps: [{ id: "com.apple.Terminal", name: "Terminal", sec: 60 }] });
+      expect((await post(payload([minute(yesterday), minute(minuteIso(1))]))).status).toBe(200);
+      const rows = await db.query.minuteApp.findMany({ where: eq(schema.minuteApp.userId, userId) });
+      expect(rows.map((r) => r.t.toISOString())).toEqual([new Date(minuteIso(1)).toISOString()]);
+    } finally {
+      delete process.env.ARENA_START_DATE;
+      delete process.env.ARENA_TIMEZONE;
+    }
+  });
+
   it("rejects missing or wrong tokens with 401", async () => {
     expect((await post(payload([]), null)).status).toBe(401);
     expect((await post(payload([]), "nope")).status).toBe(401);

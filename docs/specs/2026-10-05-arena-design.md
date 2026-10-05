@@ -196,6 +196,12 @@ that minute, so past data can't be rewritten. A device can only ever write its o
 user's data. Then recompute `daily_rollup` + derived XP for
 touched days, evaluate quests, return status. Idempotent; safe to resend.
 
+**Start date.** With `ARENA_START_DATE` (deployment env, `YYYY-MM-DD` in the company
+timezone), minutes and chats before that day are ignored at ingest, no XP is
+written for earlier days, and `pnpm db:migrate` deletes older minutes, chats,
+rollups, XP, quests and saved leaderboards on every deploy. Macs backfill agent
+logs, so without it people's history would depend on how long their agents kept logs.
+
 **Pairing from the Mac.** "Connect to Arena…" opens `<site>/connect/mac?state=<32 hex>&name=<Mac>`
 (the site comes from the build's `ARENA_SERVER_URL`, else the current server, else
 the person types it). After sign-in, one click creates a device token and sends the
