@@ -130,6 +130,14 @@ describe.skipIf(!DB_URL)("device API", async () => {
     await db.delete(schema.devices).where(eq(schema.devices.id, d2!.id));
   });
 
+  it("two uploads at once don't hand out daily and weekly quests twice", async () => {
+    const { evaluateQuests } = await import("@/lib/quest-db");
+    await Promise.all([evaluateQuests(userId), evaluateQuests(userId), evaluateQuests(userId)]);
+    const open = await db.query.quests.findMany({ where: eq(schema.quests.userId, userId) });
+    expect(open.filter((q) => q.kind === "daily")).toHaveLength(3);
+    expect(open.filter((q) => q.kind === "weekly")).toHaveLength(3);
+  });
+
   it("rejects missing or wrong tokens with 401", async () => {
     expect((await post(payload([]), null)).status).toBe(401);
     expect((await post(payload([]), "nope")).status).toBe(401);

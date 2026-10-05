@@ -2,7 +2,7 @@
  * Quest lifecycle in the database (spec §5). Rules live in quest-engine.ts.
  * Called after every ingest; idempotent.
  */
-import { and, eq, gte, inArray, isNotNull, isNull, lt, sql } from "drizzle-orm";
+import { and, eq, gt, gte, inArray, isNotNull, isNull, lt, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { dailyRollup, linearAccounts, linearIssues, quests, users, xpLedger, type Quest } from "@/db/schema";
 import { loadMinuteRows } from "@/lib/game/minutes-db";
@@ -71,9 +71,18 @@ export async function evaluateQuests(userId: string, now: Date = new Date()): Pr
 
 // ---------------------------------------------------------------------------
 
+/**
+ * Creates this window's daily or weekly quests once. A quest whose window
+ * starts within half a window of this one counts as existing, so changing timezone (which moves the
+ * day's boundaries) doesn't hand out a second set; the unique index stops two
+ * concurrent uploads from both creating one.
+ */
 async function ensureQuests(userId: string, templates: QuestTemplate[], start: Date, end: Date): Promise<void> {
+  // Same window give or take a timezone shift: starts less than half a window apart.
+  const half = (end.getTime() - start.getTime()) / 2;
   const existing = await db.query.quests.findMany({
-    where: and(eq(quests.userId, userId), eq(quests.windowStart, start), inArray(quests.template, templates)),
+    where: and(eq(quests.userId, userId), inArray(quests.template, templates),
+      gt(quests.windowStart, new Date(start.getTime() - half)), lt(quests.windowStart, new Date(start.getTime() + half))),
   });
   const have = new Set(existing.map((q) => q.template));
   for (const template of templates) {
@@ -82,7 +91,7 @@ async function ensureQuests(userId: string, templates: QuestTemplate[], start: D
     await db.insert(quests).values({
       userId, kind: def.kind, template, title: def.title, target: def.target, unit: def.unit, xp: def.xp,
       windowStart: start, windowEnd: end, state: "active", progress: 0,
-    });
+    }).onConflictDoNothing();
   }
 }
 

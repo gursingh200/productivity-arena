@@ -12,6 +12,7 @@ import {
   smallint,
   pgEnum,
   index,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
@@ -352,6 +353,7 @@ export const quests = pgTable(
     index("quests_user_state_idx").on(table.userId, table.state),
     index("quests_guild_idx").on(table.guildId),
     index("quests_user_kind_idx").on(table.userId, table.kind),
+    uniqueIndex("quests_user_template_window_idx").on(table.userId, table.template, table.windowStart),
   ]
 );
 
