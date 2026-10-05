@@ -98,7 +98,7 @@ export default function XpPage() {
         </table>
       </section>
 
-      <h2 className="section-label">Leagues</h2>
+      <h2 className="section-label" id="leagues">Leagues</h2>
       <section className="panel">
         <p className="help" style={{ marginTop: 0 }}>
           Everyone starts in Bronze. After each week you move up or down at most one league. Under 1 hour of focus time in a

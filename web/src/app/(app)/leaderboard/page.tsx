@@ -43,7 +43,7 @@ export default async function LeaderboardPage({ searchParams }: { searchParams: 
           <Link className="icon-btn" href={href({ league: LEAGUES[Math.max(0, index - 1)] })} aria-label="Previous league" aria-disabled={index === 0}>‹</Link>
           <LeagueEmblem league={league === "all" ? board.viewerLeague : league} size={40} />
           <div>
-            <div className="help">{league === "all" ? `You’re in ${LEAGUE_NAMES[board.viewerLeague]}` : "Showing"}</div>
+            <div className="help">{league === "all" ? `You’re in ${LEAGUE_NAMES[board.viewerLeague]}` : "Showing"} · <Link href="/xp#leagues">How leagues work</Link></div>
             <div className="league-name">{league === "all" ? "All leagues" : `${LEAGUE_NAMES[league]} league`}</div>
           </div>
           <Link className="icon-btn" href={href({ league: LEAGUES[Math.min(LEAGUES.length - 1, index + 1)] })} aria-label="Next league" aria-disabled={index === LEAGUES.length - 1}>›</Link>
