@@ -253,6 +253,11 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         alert.informativeText = "Paste the arena://pair link from the Connect page of the Arena dashboard."
         let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 360, height: 24))
         field.placeholderString = "arena://pair?server=…&token=…"
+        // Fill in a copied link so there's nothing to paste.
+        if let copied = NSPasteboard.general.string(forType: .string)?.trimmingCharacters(in: .whitespacesAndNewlines),
+           copied.hasPrefix("arena://pair") {
+            field.stringValue = copied
+        }
         alert.accessoryView = field
         alert.addButton(withTitle: "Connect")
         alert.addButton(withTitle: "Cancel")
