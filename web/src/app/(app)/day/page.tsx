@@ -22,6 +22,7 @@ export default async function DayPage({ searchParams }: { searchParams: Promise<
   const next = addDays(day, 1);
   const hasPrev = prev >= v.firstDay;
   const hasNext = day < v.today;
+  const yesterday = addDays(v.today, -1);
 
   return (
     <div style={{ margin: "0 auto", maxWidth: 1040 }}>
@@ -30,10 +31,18 @@ export default async function DayPage({ searchParams }: { searchParams: Promise<
           <h1 className="page-title">{day === v.today ? "Today" : longDay(day)}</h1>
           <p className="page-sub" style={{ marginBottom: 0 }}>{day === v.today ? longDay(day) : "Only you see this page."}</p>
         </div>
-        <div className="week-nav" style={{ margin: 0 }}>
+        <nav className="day-nav" aria-label="Choose a day">
           {hasPrev ? <Link className="icon-btn" href={`/day?d=${prev}`} aria-label="Previous day">‹</Link> : <span className="icon-btn" aria-disabled="true">‹</span>}
+          <div className="seg">
+            <Link href={`/day?d=${yesterday}`} aria-current={day === yesterday ? "page" : undefined}>Yesterday</Link>
+            <Link href="/day" aria-current={day === v.today ? "page" : undefined}>Today</Link>
+          </div>
           {hasNext ? <Link className="icon-btn" href={next === v.today ? "/day" : `/day?d=${next}`} aria-label="Next day">›</Link> : <span className="icon-btn" aria-disabled="true">›</span>}
-        </div>
+          <form action="/day" className="day-pick">
+            <input type="date" name="d" className="input" defaultValue={day} min={v.firstDay} max={v.today} aria-label="Go to a date" />
+            <button className="btn btn-sm btn-quiet" type="submit">Go</button>
+          </form>
+        </nav>
       </div>
 
       <div className="totals" style={{ marginTop: 24 }}>

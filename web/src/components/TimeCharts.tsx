@@ -93,12 +93,17 @@ export function HourChart({ hours }: { hours: HourTotals[] }) {
   );
 }
 
+const isMonday = (day: string) => new Date(`${day}T12:00:00Z`).getUTCDay() === 1;
+
 /**
- * Lines over time: per day (a 7-day average, so the trend shows through
- * weekends) or the running total. Hidden categories arrive as null and aren't drawn.
+ * Lines over time: each day's hours, or the running total, with a faint line
+ * at the start of every week. "Hide empty days" skips the days a line has
+ * nothing (weekends off, holidays, away), joining the days either side; the
+ * time axis stays as it is, so weeks still line up.
  */
 export function TrendChart({ days }: { days: DayTotals[] }) {
   const [mode, setMode] = useState<"daily" | "total">("daily");
+  const [hideEmpty, setHideEmpty] = useState(true);
   const [active, setActive] = useState<number | null>(null);
   const keys = SERIES.map((s) => s.key).filter((k) => days.every((d) => d[k] !== null));
   if (days.length < 2) return <p className="empty" style={{ margin: 0 }}>The trend starts after your second day.</p>;
@@ -109,58 +114,76 @@ export function TrendChart({ days }: { days: DayTotals[] }) {
   const values: Record<Key, number[]> = { humanSec: [], agentSec: [], meetingSec: [] };
   for (const k of keys) {
     let run = 0;
-    values[k] = days.map((d, i) => {
-      if (mode === "total") return (run += d[k] ?? 0);
-      const window = days.slice(Math.max(0, i - 6), i + 1);
-      return window.reduce((s, w) => s + (w[k] ?? 0), 0) / window.length;
-    });
+    values[k] = days.map((d) => (mode === "total" ? (run += d[k] ?? 0) : d[k] ?? 0));
   }
+  // Which points each line draws.
+  const drawn = (k: Key, i: number) => mode === "total" || !hideEmpty || (days[i]![k] ?? 0) > 0;
   const maxH = Math.max(1, ...keys.flatMap((k) => values[k].map((v) => v / 3600)));
-  const step = [1, 2, 4, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000].find((s) => maxH / s <= 5) ?? 1000;
+  const step = [1, 2, 4, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000].find((st) => maxH / st <= 5) ?? 1000;
   const top = Math.ceil(maxH / step) * step;
   const x = (i: number) => LEFT + (i / (days.length - 1)) * (W - LEFT - 8);
   const y = (sec: number) => TOP + plotH - (sec / 3600 / top) * plotH;
   const ticks = Array.from({ length: top / step + 1 }, (_, i) => i * step);
-  const labelEvery = Math.max(1, Math.ceil(days.length / 6));
+
+  // Week starts: a line at each Monday, labelled; with many weeks, every few.
+  const mondays = days.map((d, i) => ({ d, i })).filter(({ d }) => isMonday(d.day));
+  const labelEvery = Math.max(1, Math.ceil(mondays.length / 8));
+  const dayLabels = days.length <= 10; // a short span labels every day instead
 
   function onMove(e: React.MouseEvent<SVGRectElement>) {
     const box = e.currentTarget.getBoundingClientRect();
-    const px = ((e.clientX - box.left) / box.width) * (W - LEFT - 8);
-    setActive(Math.max(0, Math.min(days.length - 1, Math.round((px / (W - LEFT - 8)) * (days.length - 1)))));
+    const f = (e.clientX - box.left) / box.width;
+    setActive(Math.max(0, Math.min(days.length - 1, Math.round(f * (days.length - 1)))));
   }
 
   return (
     <>
       <div className="trend-head">
         <Legend keys={keys} />
-        <div className="seg" role="group" aria-label="Show">
-          <button aria-pressed={mode === "daily"} onClick={() => setMode("daily")}>Per day</button>
-          <button aria-pressed={mode === "total"} onClick={() => setMode("total")}>Running total</button>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <div className="seg" role="group" aria-label="Show">
+            <button aria-pressed={mode === "daily"} onClick={() => setMode("daily")}>Per day</button>
+            <button aria-pressed={mode === "total"} onClick={() => setMode("total")}>Running total</button>
+          </div>
+          {mode === "daily" ? (
+            <div className="seg">
+              <button aria-pressed={hideEmpty} onClick={() => setHideEmpty(!hideEmpty)}>Hide empty days</button>
+            </div>
+          ) : null}
         </div>
       </div>
-      <svg className="chart" viewBox={`0 0 ${W} ${H}`} role="img"
-        aria-label={mode === "daily" ? "Hours per day, 7-day average" : "Total hours over time"}>
+      <svg className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={mode === "daily" ? "Hours per day" : "Total hours over time"}>
         {ticks.map((t) => (
           <g key={t}>
             <line x1={LEFT} x2={W} y1={y(t * 3600)} y2={y(t * 3600)} stroke="var(--line-soft)" />
             <text x={LEFT - 8} y={y(t * 3600) + 4} textAnchor="end">{t}h</text>
           </g>
         ))}
-        {days.map((d, i) => (days.length - 1 - i) % labelEvery === 0
-          ? <text key={d.day} x={x(i)} y={H - 6} textAnchor="middle">{shortDay(d.day)}</text> : null)}
+        {mondays.map(({ d, i }, n) => (
+          <g key={d.day}>
+            <line x1={x(i)} x2={x(i)} y1={TOP} y2={TOP + plotH} stroke="var(--line)" strokeDasharray="3 4" />
+            {!dayLabels && n % labelEvery === 0 ? <text x={x(i)} y={H - 6} textAnchor="middle">{shortDay(d.day)}</text> : null}
+          </g>
+        ))}
+        {dayLabels ? days.map((d, i) => <text key={d.day} x={x(i)} y={H - 6} textAnchor="middle">{shortDay(d.day)}</text>) : null}
         {keys.map((k) => {
           const s = SERIES.find((ser) => ser.key === k)!;
-          return <polyline key={k} fill="none" stroke={s.color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"
-            points={values[k].map((v, i) => `${x(i)},${y(v)}`).join(" ")} />;
+          const pts = values[k].map((v, i) => (drawn(k, i) ? `${x(i)},${y(v)}` : null)).filter(Boolean);
+          return (
+            <g key={k}>
+              <polyline fill="none" stroke={s.color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" points={pts.join(" ")} />
+              {pts.length === 1 ? <circle cx={pts[0]!.split(",")[0]} cy={pts[0]!.split(",")[1]} r="3" fill={s.color} /> : null}
+            </g>
+          );
         })}
         {active !== null ? (
           <>
-            <line x1={x(active)} x2={x(active)} y1={TOP} y2={TOP + plotH} stroke="var(--line)" />
-            {keys.map((k) => (
-              <circle key={k} cx={x(active)} cy={y(values[k][active]!)} r="4.5" fill={SERIES.find((s) => s.key === k)!.color}
+            <line x1={x(active)} x2={x(active)} y1={TOP} y2={TOP + plotH} stroke="var(--text-2)" strokeOpacity="0.5" />
+            {keys.filter((k) => drawn(k, active)).map((k) => (
+              <circle key={k} cx={x(active)} cy={y(values[k][active]!)} r="4.5" fill={SERIES.find((ser) => ser.key === k)!.color}
                 stroke="var(--panel)" strokeWidth="2" />
             ))}
-            <Tip x={x(active)} W={W} title={mode === "daily" ? `${shortDay(days[active]!.day)}, 7-day avg` : `Total to ${shortDay(days[active]!.day)}`}
+            <Tip x={x(active)} W={W} title={mode === "daily" ? shortDay(days[active]!.day) : `Total to ${shortDay(days[active]!.day)}`}
               rows={keys.map((k) => { const s = SERIES.find((ser) => ser.key === k)!; return { color: s.color, label: s.label, value: duration(values[k][active]!) }; })} />
           </>
         ) : null}

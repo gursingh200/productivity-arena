@@ -280,6 +280,11 @@ select.input { cursor: pointer; }
 .chip:has(input:disabled) { opacity: 0.5; cursor: default; }
 .away-badge { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--raised); color: var(--text-2); margin-left: 8px; font-weight: 400; }
 .day-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
+.day-nav { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.seg a { color: var(--text-2); font-size: 13px; padding: 6px 12px; border-radius: 999px; }
+.seg a[aria-current="page"] { background: var(--panel); color: var(--text); }
+.day-pick { display: flex; gap: 6px; align-items: center; margin-left: 6px; }
+.day-pick .input { height: 34px; width: auto; padding: 0 10px; }
 .trend-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
 .seg { display: inline-flex; background: var(--raised); border-radius: 999px; padding: 3px; }
 .seg button { border: 0; background: transparent; color: var(--text-2); font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 999px; cursor: pointer; }
