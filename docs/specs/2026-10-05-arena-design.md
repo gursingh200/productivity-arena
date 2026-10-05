@@ -196,6 +196,14 @@ that minute, so past data can't be rewritten. A device can only ever write its o
 user's data. Then recompute `daily_rollup` + derived XP for
 touched days, evaluate quests, return status. Idempotent; safe to resend.
 
+**Pairing again.** After pairing, the Mac resends its last 24 hours, so a new
+server (or a new pairing with the same one) gets the whole day. Each upload carries
+the Mac's stable id (`devices.client_id`). On ingest, an earlier pairing of the same
+Mac for the same user (same client id, or for older pairings without one, the same
+Mac name) hands its minutes and chats to the current pairing and is revoked; rows
+the current pairing already has win. The resend then replaces rather than adds,
+and handed-over minutes older than 24 hours stay locked.
+
 ## 3. API
 
 ### 3.1 `POST /api/ingest` (Bearer device token)

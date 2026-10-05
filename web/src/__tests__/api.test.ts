@@ -108,6 +108,28 @@ describe.skipIf(!DB_URL)("device API", async () => {
     });
   });
 
+  it("a Mac that pairs again replaces its earlier pairing instead of adding to it", async () => {
+    const minute = (minutesAgo: number) => ({ t: minuteIso(minutesAgo), apps: [{ id: "com.apple.Terminal", name: "Terminal", sec: 60 }],
+      agents: [{ agent: "claude", sessions: 1, sec: 60, peak: 1, tokensIn: 0, tokensCached: 0, tokensOut: 0 }] });
+    expect((await post(payload([minute(10), minute(9)]))).status).toBe(200);
+
+    // Pair again: a second device row for the same Mac, which resends the same minutes.
+    const token2 = TOKEN + "-again";
+    const [d2] = await db.insert(schema.devices).values({ userId, name: "Test Mac", tokenHash: hashDeviceToken(token2) }).returning();
+    expect((await post(payload([minute(10), minute(9), minute(8)]), token2)).status).toBe(200);
+
+    const agentRows = await db.query.minuteAgent.findMany({ where: eq(schema.minuteAgent.userId, userId) });
+    expect(agentRows).toHaveLength(3);
+    expect(new Set(agentRows.map((r) => r.deviceId))).toEqual(new Set([d2!.id]));
+    const old = await db.query.devices.findFirst({ where: eq(schema.devices.id, deviceId) });
+    expect(old?.revokedAt).toBeTruthy();
+    expect((await post(payload([minute(1)]))).status).toBe(401);
+
+    // Put the original pairing back for the other tests.
+    await db.update(schema.devices).set({ revokedAt: null }).where(eq(schema.devices.id, deviceId));
+    await db.delete(schema.devices).where(eq(schema.devices.id, d2!.id));
+  });
+
   it("rejects missing or wrong tokens with 401", async () => {
     expect((await post(payload([]), null)).status).toBe(401);
     expect((await post(payload([]), "nope")).status).toBe(401);

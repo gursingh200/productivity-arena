@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { chats, devices, minuteAgent, minuteApp, minuteMeeting, users } from "@/db/schema";
 import { authenticateDevice } from "@/lib/device-auth";
 import { IngestPayloadSchema, MAX_CHATS, MAX_MINUTES } from "@/lib/ingest-schema";
+import { adoptEarlierPairings } from "@/lib/device-merge";
 import { ingestCutoff, lockedMinutes, pruneMinutes } from "@/lib/retention";
 import { recomputeForDays } from "@/lib/rollup";
 import { buildStatusPayload } from "@/lib/status";
@@ -50,6 +51,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // days may already have lost minutes, and recomputing would undercount them.
   // Minutes older than 24 hours that this device already sent are locked: they
   // can be filled in once but never replaced, so history can't be rewritten.
+  // An earlier pairing of this Mac hands its rows over first, so the resend after
+  // pairing replaces them instead of adding to them, and their lock carries over.
+  await adoptEarlierPairings(auth.userId, auth.deviceId, payload.device.id, payload.device.name);
+
   const now = new Date();
   const cutoff = ingestCutoff(now);
   const recent = payload.minutes.filter((m) => new Date(m.t) >= cutoff);
