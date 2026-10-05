@@ -274,6 +274,59 @@ public final class ArenaEngine: @unchecked Sendable {
         DispatchQueue.main.async { self.onStatus?(status) }
     }
 
+    // MARK: - Linear
+
+    /// The Linear API key from the Keychain; nil when Linear isn't connected.
+    public var linearKey: String? {
+        get { snapshotLock.withLock { _linearKey } }
+        set { snapshotLock.withLock { _linearKey = newValue } }
+    }
+    private var _linearKey: String?
+    static let linearSyncedKey = "linear.lastSyncedAt"
+
+    public enum LinearState: Equatable, Sendable {
+        case off
+        case synced(Date?)
+        case badKey
+    }
+    /// For the menu; read on the main thread.
+    public var linearState: LinearState {
+        snapshotLock.withLock { _linearKey == nil ? .off : (_linearBadKey ? .badKey : .synced(_linearSyncedAt)) }
+    }
+    private var _linearBadKey = false
+    private var _linearSyncedAt: Date?
+
+    /// Fetches assigned issues from Linear and reports them, at most every 15 minutes
+    /// unless forced. Throws `LinearError.badKey` when Linear rejects the key.
+    public func syncLinear(force: Bool = false, now: Date = Date()) async throws {
+        guard let key = linearKey, client.token != nil, client.serverURL != nil else { return }
+        let last = queue.sync { (try? store.value(Self.linearSyncedKey)).flatMap { $0 }.flatMap(Double.init).map(Date.init(timeIntervalSince1970:)) }
+        snapshotLock.withLock { _linearSyncedAt = last }
+        if !force, let last, now.timeIntervalSince(last) < LinearAPI.syncInterval { return }
+        do {
+            let issues = try await LinearAPI.assignedIssues(apiKey: key, since: LinearAPI.since(lastSync: last, now: now))
+            try await client.reportLinear(issues)
+        } catch LinearError.badKey {
+            snapshotLock.withLock { _linearBadKey = true }
+            throw LinearError.badKey
+        }
+        queue.sync { log { try store.setValue(String(now.timeIntervalSince1970), for: Self.linearSyncedKey) } }
+        snapshotLock.withLock { _linearBadKey = false; _linearSyncedAt = now }
+    }
+
+    /// Uses a new key, starting again from a full first sync.
+    public func setLinearKey(_ key: String?) {
+        linearKey = key
+        snapshotLock.withLock { _linearBadKey = false; _linearSyncedAt = nil }
+        queue.sync { log { try store.setValue(nil, for: Self.linearSyncedKey) } }
+    }
+
+    /// Forgets the key and tells the server Linear is disconnected. XP already earned stays.
+    public func disconnectLinear() async {
+        setLinearKey(nil)
+        try? await client.disconnectLinear()
+    }
+
     // MARK: - Errors
 
     /// Tracking must never crash the app; failures are logged and skipped.

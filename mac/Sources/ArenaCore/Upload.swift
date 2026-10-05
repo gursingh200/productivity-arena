@@ -140,6 +140,15 @@ public final class ArenaClient: @unchecked Sendable {
         _ = try await send("POST", "api/agent/quests/\(id)/decline")
     }
 
+    /// Reports Linear issues this Mac fetched itself; the server never sees the Linear key.
+    public func reportLinear(_ issues: [LinearIssue]) async throws {
+        _ = try await send("POST", "api/agent/linear", body: try JSONEncoder().encode(["issues": issues]))
+    }
+
+    public func disconnectLinear() async throws {
+        _ = try await send("DELETE", "api/agent/linear")
+    }
+
     private func send(_ method: String, _ path: String, body: Data? = nil) async throws -> Data {
         guard let serverURL, let token else { throw APIError.notPaired }
         var request = URLRequest(url: serverURL.appendingPathComponent(path))

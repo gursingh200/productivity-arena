@@ -65,6 +65,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         menuBar = MenuBarController(engine: engine, frontApp: frontApp)
         menuBar.onPair = { [weak self] link in self?.pair(with: link) }
+        menuBar.onConnectLinear = { [weak self] key in self?.connectLinear(key) }
+        menuBar.onDisconnectLinear = { [weak self] in self?.disconnectLinear() }
+        engine.linearKey = Keychain.loadLinearKey()
         menuBar.onOpenActivity = { [weak self] in self?.openActivity(range: nil) }
         menuBar.onQuestResponse = { [weak self] id, accept in
             guard let engine = self?.engine else { return }
@@ -130,6 +133,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         // Upload.
         schedule(every: 300, tolerance: 30) { [weak self] in self?.uploadSoon() }
+        // Linear (only syncs when 15 minutes have passed).
+        schedule(every: 300, tolerance: 60) { [weak self] in self?.syncLinearSoon() }
         // Safety net for missed file events, and retention cleanup.
         schedule(every: 600, tolerance: 60) { [weak self] in self?.engine.scanEverything() }
         // Menu bar title.
@@ -152,6 +157,42 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func uploadSoon() {
         Task { await engine.upload() }
+    }
+
+    private func syncLinearSoon() {
+        Task { try? await engine.syncLinear() }
+    }
+
+    // MARK: - Linear
+
+    /// Linear is asked from this Mac; the key never leaves the Keychain.
+    private func connectLinear(_ key: String) {
+        guard engine.currentSettings().serverURL != nil else {
+            menuBar.showMessage("Connect this Mac to Arena first, then connect Linear.")
+            return
+        }
+        let previous = engine.linearKey
+        engine.setLinearKey(key)
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            do {
+                try await self.engine.syncLinear(force: true)
+                Keychain.saveLinearKey(key)
+                self.menuBar.showMessage("Linear is connected. Closed issues assigned to you now earn XP.")
+            } catch LinearError.badKey {
+                self.engine.setLinearKey(previous)
+                self.menuBar.showMessage("Linear didn’t accept that key. Copy a fresh personal API key from Linear and try again.")
+            } catch {
+                self.engine.setLinearKey(previous)
+                self.menuBar.showMessage("Couldn’t reach Linear or Arena. Check your connection and try again.")
+            }
+        }
+    }
+
+    private func disconnectLinear() {
+        Keychain.deleteLinearKey()
+        Task { await engine.disconnectLinear() }
+        menuBar.showMessage("Linear is disconnected. XP you already earned stays.")
     }
 
     // MARK: - Activity window

@@ -7,6 +7,8 @@ import ArenaMac
 final class MenuBarController: NSObject, NSMenuDelegate {
 
     var onPair: ((String) -> Void)?
+    var onConnectLinear: ((String) -> Void)?
+    var onDisconnectLinear: (() -> Void)?
     var onQuestResponse: ((String, Bool) -> Void)?
     var onOpenActivity: (() -> Void)?
     /// Set when this build can update itself.
@@ -242,8 +244,37 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         let sub = NSMenu()
         sub.addItem(label(settings.serverURL.map { "Server: \($0.host ?? $0.absoluteString)" } ?? "Not connected"))
         sub.addItem(action("Paste Pairing Link…") { [weak self] in self?.askForPairingLink() })
+        sub.addItem(.separator())
+        switch engine.linearState {
+        case .off:
+            sub.addItem(action("Connect Linear…") { [weak self] in self?.askForLinearKey() })
+        case .badKey:
+            sub.addItem(label("Linear: key rejected"))
+            sub.addItem(action("Replace Linear Key…") { [weak self] in self?.askForLinearKey() })
+            sub.addItem(action("Disconnect Linear") { [weak self] in self?.onDisconnectLinear?() })
+        case .synced(let at):
+            sub.addItem(label(at.map { "Linear: synced \(DateFormatter.localizedString(from: $0, dateStyle: .none, timeStyle: .short))" } ?? "Linear: connected"))
+            sub.addItem(action("Disconnect Linear") { [weak self] in self?.onDisconnectLinear?() })
+        }
         item.submenu = sub
         return item
+    }
+
+    private func askForLinearKey() {
+        NSApp.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.messageText = "Connect Linear"
+        alert.informativeText = "Paste a personal API key from Linear (Settings → Security & access). It stays in this Mac’s Keychain. Arena only sends each closed issue’s number, estimate and time to the leaderboard."
+        let field = NSSecureTextField(frame: NSRect(x: 0, y: 0, width: 360, height: 24))
+        field.placeholderString = "lin_api_…"
+        alert.accessoryView = field
+        alert.addButton(withTitle: "Connect")
+        alert.addButton(withTitle: "Cancel")
+        alert.window.initialFirstResponder = field
+        if alert.runModal() == .alertFirstButtonReturn {
+            let key = field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !key.isEmpty { onConnectLinear?(key) }
+        }
     }
 
     private func askForPairingLink() {
