@@ -359,8 +359,6 @@ export const linearAccounts = pgTable("linear_accounts", {
   userId: uuid("user_id")
     .primaryKey()
     .references(() => users.id, { onDelete: "cascade" }),
-  apiKeyEnc: text("api_key_enc").notNull(),
-  linearUserId: text("linear_user_id"),
   lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }),
 });
 
@@ -372,10 +370,8 @@ export const linearIssues = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
     issueId: text("issue_id").notNull(),
     identifier: text("identifier").notNull(),
-    title: text("title").notNull(),
     estimate: integer("estimate"),
     completedAt: timestamp("completed_at", { withTimezone: true }),
-    url: text("url"),
   },
   (table) => [
     primaryKey({ columns: [table.userId, table.issueId] }),

@@ -40,7 +40,7 @@ export default async function SettingsPage() {
       <section className="settings-section">
         <h2 className="section-label" style={{ marginTop: 0 }}>Linear</h2>
         <div className="panel">
-          <LinearSettings connected={Boolean(linearAccount)} lastSyncedAt={linearAccount?.lastSyncedAt?.toISOString() ?? null} />
+          <LinearSettings connected={Boolean(linearAccount)} lastSyncedAt={linearAccount?.lastSyncedAt ?? null} />
         </div>
       </section>
     </div>

@@ -87,7 +87,7 @@ Every merge to `main` that changes `mac/` builds a signed release. Every install
 
 - **Never:** which keys you press, what you type, screenshots, prompts or chat contents, file paths. For human time it only asks macOS "how long since the last input?"
 - **Kept on your Mac only:** apps per minute, agent session timing, window titles if you turn them on (off by default, kept 7 days). See it all in **Your Activity…** in the menu bar. Delete it any time under **Privacy**.
-- **Sent to your server:** per-minute totals (seconds per app, agent seconds and tokens, call seconds) and per-chat totals under a one-way hashed ID.
+- **Sent to your server:** per-minute totals (seconds per app, agent seconds and tokens, call seconds) and per-chat totals under a one-way hashed ID. If you connect Linear, each assigned issue's number (e.g. ENG-123), estimate and completion time. Your Linear API key stays in your Mac's Keychain; the Mac asks Linear itself.
 - **Shared with teammates:** only what you choose, category by category. You see a stat of someone else only if you share that stat too. Admins get no exception.
 
 ## Configuration
@@ -99,7 +99,6 @@ Web app (environment variables; see [`web/.env.example`](web/.env.example)):
 | `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, `DATABASE_POOLER` | Postgres connection; see DEPLOY.md |
 | `AUTH_SECRET`, `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET` | Sign-in |
 | `ALLOWED_EMAIL_DOMAIN`, `ALLOWED_EMAILS` | Who can join |
-| `ARENA_SECRET` | Encrypts members' Linear API keys; never change it |
 | `PUBLIC_BASE_URL` | Your web app's address, used in Mac pairing links |
 | `ARENA_TIMEZONE` | The timezone leaderboard weeks follow |
 | `ARENA_RELEASES_REPO` | `owner/repo` with your Mac releases, for the site's download link. On Vercel it defaults to the repo it deploys from. |

@@ -176,8 +176,8 @@ plus the same link for manual paste. Token stored in the Keychain.
 - `daily_rollup(user_id, day, human_sec, agent_sec, meeting_sec, agent_sec_by_agent jsonb, tokens, peak_parallel, longest_focus_sec, focus_blocks, top_apps jsonb)` — recomputed from minutes for touched days. `day` uses the user's timezone.
 - `xp_ledger(id, user_id, day, source: focus|agent|orchestration|linear|quest, source_key, xp, reason, rules_version, created_at)` — UNIQUE(user_id, source, source_key)
 - `quests(id, user_id null, guild_id null, kind: live|daily|weekly|guild, template, title, target, unit, xp, window_start, window_end, state: offered|active|completed|failed|expired|declined, progress, created_at, resolved_at)`
-- `linear_accounts(user_id, api_key_enc, linear_user_id, last_synced_at)`
-- `linear_issues(user_id, issue_id, identifier, title, estimate, completed_at, url)`
+- `linear_accounts(user_id, last_synced_at)` (a row means Linear is connected on the Mac)
+- `linear_issues(user_id, issue_id, identifier, estimate, completed_at)`
 
 ### Retention
 
@@ -319,7 +319,7 @@ for 15 min, 100).
 - Auth: Google (Auth.js) restricted to `ALLOWED_EMAIL_DOMAIN`; a dev-only email login
   when `NODE_ENV=development`. First user becomes admin.
 - Pages: `/` (your dashboard = your own profile), `/leaderboard`, `/u/[handle]`,
-  `/quests`, `/connect` (pair Mac), `/settings` (profile, sharing, Linear key),
+  `/quests`, `/connect` (pair Mac), `/settings` (profile, sharing, Linear status),
   `/welcome` (first-login sharing), `/admin` (team table: human, agent and meeting hours per person per week).
 - Profile: identity with level ring and league; **this week** scoreboard (Human,
   Agents, Meetings, each against the same days last week, plus the agent-to-human
@@ -349,10 +349,16 @@ for 15 min, 100).
 
 ## 8. Linear
 
-User pastes a Linear personal API key in Settings (stored AES-256-GCM encrypted with
-`ARENA_SECRET`). Sync runs when the status endpoint is hit and last sync > 15 min,
-or on demand: GraphQL `viewer { assignedIssues(filter: { completedAt: { gt: since } }) }`.
-Upsert issues; ledger rows keyed by issue id; issue no longer completed → reversal.
+The server never holds a Linear key. The user pastes a personal API key in the Mac
+app (Connection → Connect Linear); it's kept in the Keychain. Every 15 minutes the
+Mac asks Linear for `viewer { assignedIssues(filter: { updatedAt: { gte: since } }) }`
+(90 days back the first time, then from a day before the last sync) and POSTs
+`/api/agent/linear` with only `{id, identifier, estimate, completedAt}` per issue
+(`completedAt` only while the state is completed). The server upserts issues,
+ignores future completions, and recomputes Linear XP for each day that changed;
+issue no longer completed → reversal. `DELETE /api/agent/linear` disconnects (XP
+earned stays). Trade-off: the server can't verify issues against Linear, the same
+trust as the Mac's activity data.
 
 ## 9. Testing
 

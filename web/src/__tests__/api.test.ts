@@ -16,6 +16,7 @@ describe.skipIf(!DB_URL)("device API", async () => {
   const status = (await import("@/app/api/agent/status/route")).GET;
   const accept = (await import("@/app/api/agent/quests/[id]/accept/route")).POST;
   const decline = (await import("@/app/api/agent/quests/[id]/decline/route")).POST;
+  const linear = await import("@/app/api/agent/linear/route");
 
   const TOKEN = "test-token-" + Math.random().toString(36).slice(2);
   const DEVICE_UUID = "6f1c2d3e-4b5a-4c7d-8e9f-0a1b2c3d4e5f";
@@ -65,6 +66,46 @@ describe.skipIf(!DB_URL)("device API", async () => {
     await db.delete(schema.quests).where(eq(schema.quests.userId, userId));
     await db.delete(schema.minuteMeeting).where(eq(schema.minuteMeeting.userId, userId));
     await db.delete(schema.chats).where(eq(schema.chats.userId, userId));
+  });
+
+  describe("Linear issues from the Mac", () => {
+    const send = (body: unknown, method: "POST" | "DELETE" = "POST", token: string | null = TOKEN) =>
+      (method === "POST" ? linear.POST : linear.DELETE)(new NextRequest("http://localhost/api/agent/linear", {
+        method,
+        headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) },
+        ...(method === "POST" ? { body: JSON.stringify(body) } : {}),
+      }));
+    const linearXp = async () => (await db.query.xpLedger.findMany({
+      where: and(eq(schema.xpLedger.userId, userId), eq(schema.xpLedger.source, "linear")),
+    })).reduce((sum, r) => sum + r.xp, 0);
+    const issue = (completedAt: string | null) => ({ id: "lin-1", identifier: "ENG-1", estimate: 2, completedAt });
+
+    it("needs a device token", async () => {
+      expect((await send({ issues: [] }, "POST", null)).status).toBe(401);
+      expect((await send(null, "DELETE", "nope")).status).toBe(401);
+    });
+
+    it("rejects anything but issue number, estimate and completion (no titles, no keys)", async () => {
+      expect((await send({ issues: [{ ...issue(null), title: "Secret plan" }] })).status).toBe(400);
+      expect((await send({ issues: [], apiKey: "lin_api_x" })).status).toBe(400);
+    });
+
+    it("earns XP for a completed issue, reverses it when reopened, and disconnects", async () => {
+      expect((await send({ issues: [issue(new Date(Date.now() - 60_000).toISOString())] })).status).toBe(200);
+      expect(await db.query.linearAccounts.findFirst({ where: eq(schema.linearAccounts.userId, userId) })).toBeTruthy();
+      expect(await linearXp()).toBe(50);
+
+      await send({ issues: [issue(null)] });
+      expect(await linearXp()).toBe(0);
+
+      expect((await send(null, "DELETE")).status).toBe(200);
+      expect(await db.query.linearAccounts.findFirst({ where: eq(schema.linearAccounts.userId, userId) })).toBeUndefined();
+    });
+
+    it("ignores completions in the future", async () => {
+      await send({ issues: [issue(new Date(Date.now() + 86_400_000).toISOString())] });
+      expect(await linearXp()).toBe(0);
+    });
   });
 
   it("rejects missing or wrong tokens with 401", async () => {

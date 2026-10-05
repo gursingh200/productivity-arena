@@ -12,7 +12,6 @@ import { sql } from "drizzle-orm";
 import { db } from "@/db";
 import * as schema from "@/db/schema";
 import { hashDeviceToken } from "@/lib/device-auth";
-import { encryptApiKey } from "@/lib/linear-crypto";
 import { evaluateQuests } from "@/lib/quest-db";
 import { sharingColumns, type Visibility } from "@/lib/sharing";
 import { recomputeDay } from "@/lib/rollup";
@@ -133,7 +132,7 @@ async function main() {
       userId: user!.id, name: `${person.name.split(" ")[0]}'s MacBook Pro`, tokenHash: hashDeviceToken(hex16() + hex16()), agentVersion: "0.1.0",
     }).returning();
     if (person.linear) {
-      await db.insert(schema.linearAccounts).values({ userId: user!.id, apiKeyEnc: encryptApiKey("lin_api_seed_placeholder"), lastSyncedAt: now });
+      await db.insert(schema.linearAccounts).values({ userId: user!.id, lastSyncedAt: now });
     }
     await seedPerson(person, user!.id, device!.id, now);
     console.log(`  ${person.name}`);
@@ -204,8 +203,8 @@ async function seedPerson(p: Persona, userId: string, deviceId: string, now: Dat
         const completedAt = new Date(start.getTime() + between(11, 19) * 3_600_000);
         if (completedAt > now) continue;
         const n = int(100, 999);
-        issueRows.push({ userId, issueId: `seed-${p.handle}-${day}-${i}`, identifier: `ENG-${n}`, title: `Seed issue ${n}`,
-          estimate: weighted([[1, 3], [2, 3], [3, 2], [5, 1]]), completedAt, url: null });
+        issueRows.push({ userId, issueId: `seed-${p.handle}-${day}-${i}`, identifier: `ENG-${n}`,
+          estimate: weighted([[1, 3], [2, 3], [3, 2], [5, 1]]), completedAt });
       }
     }
   }
