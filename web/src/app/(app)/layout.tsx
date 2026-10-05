@@ -19,6 +19,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <summary aria-label="Account menu"><Avatar name={viewer.name} image={viewer.image} size={34} /></summary>
           <div className="account-menu">
             <Link href={`/u/${viewer.handle}`}>Your profile</Link>
+            <Link href="/day">Your day</Link>
             <Link href="/connect">Connect a Mac</Link>
             <Link href="/settings">Settings</Link>
             {viewer.role === "admin" ? <Link href="/admin">Team overview</Link> : null}

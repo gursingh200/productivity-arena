@@ -9,6 +9,7 @@ import { and, desc, eq, gte, inArray, lt, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { chats, dailyRollup, linearIssues, quests, users, xpLedger, type Quest, type User } from "@/db/schema";
 import { awayToday } from "@/lib/league-db";
+import { startDay } from "@/lib/start-date";
 import { type League } from "@/lib/leagues";
 import { computeLevel, type LevelInfo } from "@/lib/levels";
 import { questsForUser } from "@/lib/quest-db";
@@ -72,6 +73,8 @@ export interface ProfileData {
   lastWeek: WeekTotals;
   /** Last 30 local days, oldest first. */
   last30Days: DayTotals[];
+  /** Every day from the first counted one (at most a year), for the trend lines. */
+  history: DayTotals[];
   xp: {
     level: LevelInfo;
     league: League;
@@ -182,6 +185,7 @@ export async function loadProfile(handle: string, viewer: User, now = new Date()
     week: weekOf(thisWeek),
     lastWeek: weekOf(lastWeek),
     last30Days: totalsFor(start30, 30),
+    history: await historyFor(user.id, today, visible),
     xp: visible.xp ? await xpSection(user, isOwner, visible, now) : null,
     human: visible.human ? {
       days90: rawDays(start90, 90),
@@ -307,4 +311,25 @@ async function skillsFor(
     totalOutputTokens: [...agents.values()].reduce((s, a) => s + a.tokensOut, 0),
     totalAgentSec: [...agents.values()].reduce((s, a) => s + a.agentSec, 0),
   });
+}
+
+/** Daily totals from the first day with data (or the start date) to today, a year at most. */
+async function historyFor(userId: string, today: string, visible: Visibility): Promise<DayTotals[]> {
+  const yearAgo = addDays(today, -364);
+  const rows = await db.select({ day: dailyRollup.day, humanSec: dailyRollup.humanSec, agentSec: dailyRollup.agentSec, meetingSec: dailyRollup.meetingSec })
+    .from(dailyRollup).where(and(eq(dailyRollup.userId, userId), gte(dailyRollup.day, yearAgo)));
+  if (rows.length === 0) return [];
+  const byDay = new Map(rows.map((r) => [r.day, r]));
+  const first = [rows.map((r) => r.day).sort()[0]!, startDay() ?? ""].sort().at(-1)!;
+  const out: DayTotals[] = [];
+  for (let day = first; day <= today; day = addDays(day, 1)) {
+    const r = byDay.get(day);
+    out.push({
+      day,
+      humanSec: visible.human ? r?.humanSec ?? 0 : null,
+      agentSec: visible.agents ? r?.agentSec ?? 0 : null,
+      meetingSec: visible.meetings ? r?.meetingSec ?? 0 : null,
+    });
+  }
+  return out;
 }

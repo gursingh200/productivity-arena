@@ -4,6 +4,7 @@ import type { ProfileData } from "@/lib/profile";
 import type { Category } from "@/lib/sharing";
 import { NotShared } from "./NotShared";
 import { ActivityChart } from "./ActivityChart";
+import { TrendChart } from "./TimeCharts";
 import { AgentsPanel } from "./AgentsPanel";
 import { AppsPanel } from "./AppsPanel";
 import { Heatmap, HeatScale } from "./Heatmap";
@@ -40,7 +41,7 @@ export function ProfileView({ data }: { data: ProfileData }) {
 
       <div className="grid12">
         <Panel title="Human, agents and meetings" note="Last 30 days" className="c8">
-          {anyDaily ? <ActivityChart days={data.last30Days} /> : hiddenNote("human")}
+          {anyDaily ? <ActivityChart days={data.last30Days} linkDays={data.isOwner} /> : hiddenNote("human")}
         </Panel>
         {data.isOwner && xp ? (
           <Panel title="Quests" className="c4">
@@ -54,6 +55,12 @@ export function ProfileView({ data }: { data: ProfileData }) {
             {xp ? <XpLog rows={xp.recentXp.slice(0, 5)} /> : hiddenNote("xp")}
           </Panel>
         )}
+
+        {anyDaily ? (
+          <Panel title="Over time" note={data.isOwner ? "Your trend since you started" : "Since they started"} className="c12">
+            <TrendChart days={data.history} />
+          </Panel>
+        ) : null}
 
         <Panel title="Focus" note="Last 90 days" className="c8">
           {human ? (

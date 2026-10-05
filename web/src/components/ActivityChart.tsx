@@ -21,7 +21,7 @@ const TOP = 6;
  * Hover (or focus) a day for exact values.
  */
 /** Days come with hidden categories as null; only visible series are drawn. */
-function Chart({ days, series, className, W }: { days: DayTotals[]; series: Series[]; className: string; W: number }) {
+function Chart({ days, series, className, W, linkDays }: { days: DayTotals[]; series: Series[]; className: string; W: number; linkDays: boolean }) {
   const SERIES = series;
   const [active, setActive] = useState<number | null>(null);
   const max = Math.max(1, ...days.flatMap((d) => SERIES.map((s) => (d[s.key] ?? 0) / 3600)));
@@ -49,8 +49,8 @@ function Chart({ days, series, className, W }: { days: DayTotals[]; series: Seri
       {days.map((d, i) => {
         const x0 = LEFT + i * slot;
         const gx = x0 + (slot - group) / 2;
-        return (
-          <g key={d.day} tabIndex={0} onMouseEnter={() => setActive(i)} onMouseLeave={() => setActive(null)}
+        const bar = (
+          <g key={d.day} tabIndex={linkDays ? -1 : 0} onMouseEnter={() => setActive(i)} onMouseLeave={() => setActive(null)}
             onFocus={() => setActive(i)} onBlur={() => setActive(null)}
             aria-label={`${shortDay(d.day)}: ${SERIES.map((s) => `${duration(d[s.key] ?? 0)} ${s.label.toLowerCase()}`).join(", ")}`}>
             <rect x={x0 + 1} y={TOP} width={slot - 2} height={plotH} rx="6" fill={active === i ? "var(--raised)" : "transparent"} />
@@ -63,6 +63,8 @@ function Chart({ days, series, className, W }: { days: DayTotals[]; series: Seri
             {(days.length - 1 - i) % labelEvery === 0 ? <text x={x0 + slot / 2} y={H - 6} textAnchor="middle">{shortDay(d.day)}</text> : null}
           </g>
         );
+        // Your own chart: each day opens that day's page.
+        return linkDays ? <a key={d.day} href={`/day?d=${d.day}`} aria-label={`Open ${shortDay(d.day)}`}>{bar}</a> : bar;
       })}
       {active !== null ? <Tip day={days[active]!} series={SERIES} x={LEFT + active * slot + slot / 2} W={W} /> : null}
     </svg>
@@ -94,15 +96,15 @@ function roundedTop(x: number, y: number, w: number, h: number, r: number): stri
   return `M${x},${y + h} V${y + rr} Q${x},${y} ${x + rr},${y} H${x + w - rr} Q${x + w},${y} ${x + w},${y + rr} V${y + h} Z`;
 }
 
-export function ActivityChart({ days }: { days: DayTotals[] }) {
+export function ActivityChart({ days, linkDays = false }: { days: DayTotals[]; linkDays?: boolean }) {
   const series = ALL_SERIES.filter((s) => days.every((d) => d[s.key] !== null));
   return (
     <>
       <div className="legend" style={{ marginBottom: 16 }}>
         {series.map((s) => <span key={s.key}><i className="dot" style={{ background: s.color }} />{s.label}</span>)}
       </div>
-      <Chart days={days} series={series} className="chart-long" W={760} />
-      <Chart days={days.slice(-14)} series={series} className="chart-short" W={380} />
+      <Chart days={days} series={series} className="chart-long" W={760} linkDays={linkDays} />
+      <Chart days={days.slice(-14)} series={series} className="chart-short" W={380} linkDays={linkDays} />
     </>
   );
 }

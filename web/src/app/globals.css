@@ -279,6 +279,11 @@ select.input { cursor: pointer; }
 .chip:has(input:focus-visible) { outline: 2px solid var(--text-2); outline-offset: 2px; }
 .chip:has(input:disabled) { opacity: 0.5; cursor: default; }
 .away-badge { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--raised); color: var(--text-2); margin-left: 8px; font-weight: 400; }
+.day-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
+.trend-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.seg { display: inline-flex; background: var(--raised); border-radius: 999px; padding: 3px; }
+.seg button { border: 0; background: transparent; color: var(--text-2); font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 999px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--panel); color: var(--text); }
 .update-banner { display: flex; gap: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 14px 16px 14px 20px; margin: 0 0 24px; border-radius: var(--r); background: color-mix(in srgb, var(--human) 14%, var(--panel)); border: 1px solid color-mix(in srgb, var(--human) 40%, transparent); color: var(--text-2); font-size: 14px; }
 .update-banner b { color: var(--text); font-weight: 500; }
 .notice-err { color: var(--danger); background: color-mix(in srgb, #e05a3a 14%, var(--panel)); }
