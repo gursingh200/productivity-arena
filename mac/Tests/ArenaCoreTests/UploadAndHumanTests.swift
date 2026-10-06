@@ -19,7 +19,7 @@ struct PayloadTests {
         let built = try PayloadBuilder.build(store: box.store, device: device)
         let json = try #require(try JSONSerialization.jsonObject(with: JSONEncoder().encode(built.payload)) as? [String: Any])
         #expect(json["schema"] as? Int == 1)
-        #expect(Set((json["device"] as? [String: Any])?.keys ?? [:].keys) == ["id", "name", "os", "agentVersion"])
+        #expect(Set((json["device"] as? [String: Any])?.keys ?? [:].keys) == ["id", "name", "os", "agentVersion", "timezone"])
         let minute = try #require((json["minutes"] as? [[String: Any]])?.first)
         #expect(minute["t"] as? String == "2026-10-05T10:31:00Z")
         let apps = try #require(minute["apps"] as? [[String: Any]])

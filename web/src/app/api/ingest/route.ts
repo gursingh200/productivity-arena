@@ -8,6 +8,7 @@ import { adoptEarlierPairings } from "@/lib/device-merge";
 import { ingestCutoff, lockedMinutes, pruneMinutes } from "@/lib/retention";
 import { recomputeForDays } from "@/lib/rollup";
 import { startInstant } from "@/lib/start-date";
+import { changeTimezone } from "@/lib/user-timezone";
 import { buildStatusPayload } from "@/lib/status";
 import { toUserDay } from "@/lib/timezone";
 
@@ -65,6 +66,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const locked = await lockedMinutes(auth.deviceId, recent.map((m) => new Date(m.t)), now);
   const minutes = recent.filter((m) => !locked.has(new Date(m.t).getTime()));
 
+  // The person's days follow their Mac's timezone; a change rebuilds recent days first.
+  if (payload.device.timezone) await changeTimezone(auth.userId, payload.device.timezone, now);
   const user = await db.query.users.findFirst({ where: eq(users.id, auth.userId), columns: { timezone: true } });
   const timezone = user?.timezone ?? "UTC";
   const touchedDays = new Set<string>();

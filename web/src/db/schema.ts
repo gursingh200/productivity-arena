@@ -59,6 +59,8 @@ export const users = pgTable("users", {
   role: roleEnum("role").notNull().default("member"),
   guildId: uuid("guild_id").references(() => guilds.id, { onDelete: "set null" }),
   timezone: text("timezone").notNull().default("UTC"),
+  /** When a Mac (or the person) last set the timezone; null means it's still the default. */
+  timezoneSetAt: timestamp("timezone_set_at", { withTimezone: true }),
   // What this person shares (spec §7, give to get): you see a stat of someone
   // else only if they share it and you share it too. Nothing is shared by default.
   shareXp: boolean("share_xp").notNull().default(false),

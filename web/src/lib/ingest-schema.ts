@@ -49,6 +49,8 @@ export const IngestPayloadSchema = z.object({
     name: z.string().min(1),
     os: z.string().optional(),
     agentVersion: z.string().optional(),
+    /** The Mac's IANA timezone, e.g. "Asia/Kolkata"; the person's days follow it. */
+    timezone: z.string().max(64).optional(),
   }),
   minutes: z.array(MinuteSchema),
   chats: z.array(ChatEntrySchema).optional().default([]),

@@ -86,12 +86,16 @@ public struct DeviceInfo: Codable, Equatable {
     public var name: String
     public var os: String
     public var agentVersion: String
+    /// The Mac's IANA timezone; the server counts this person's days in it,
+    /// so the website and this Mac agree on what "Monday" is.
+    public var timezone: String?
 
-    public init(id: String, name: String, os: String, agentVersion: String) {
+    public init(id: String, name: String, os: String, agentVersion: String, timezone: String? = TimeZone.current.identifier) {
         self.id = id
         self.name = name
         self.os = os
         self.agentVersion = agentVersion
+        self.timezone = timezone
     }
 }
 

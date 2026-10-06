@@ -1,3 +1,4 @@
+import { changeTimezone } from "@/lib/user-timezone";
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/db";
@@ -45,10 +46,13 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
     }
   }
 
+  const { timezone, ...rest } = parsed.data;
   await db
     .update(users)
-    .set(parsed.data)
+    .set(rest)
     .where(eq(users.id, session.user.id));
+  // A timezone change rebuilds recent days so they follow the new boundaries.
+  if (timezone) await changeTimezone(session.user.id, timezone);
 
   return NextResponse.json({ ok: true });
 }

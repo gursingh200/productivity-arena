@@ -158,6 +158,28 @@ describe.skipIf(!DB_URL)("device API", async () => {
     }
   });
 
+  it("counts days in the Mac's timezone and rebuilds them when it changes", async () => {
+    const { toUserDay } = await import("@/lib/timezone");
+    const t = minuteIso(5);
+    const minute = { t, apps: [{ id: "com.apple.Terminal", name: "Terminal", sec: 60 }] };
+    const withTz = (timezone: string) => ({ ...payload([minute]), device: { ...payload([]).device, timezone } });
+    const rollupDays = async () => (await db.query.dailyRollup.findMany({ where: eq(schema.dailyRollup.userId, userId) })).map((r) => r.day);
+    try {
+      expect((await post(withTz("Pacific/Kiritimati"))).status).toBe(200); // UTC+14
+      expect((await db.query.users.findFirst({ where: eq(schema.users.id, userId) }))?.timezone).toBe("Pacific/Kiritimati");
+      expect(await rollupDays()).toContain(toUserDay(new Date(t), "Pacific/Kiritimati"));
+
+      expect((await post(withTz("Pacific/Pago_Pago"))).status).toBe(200); // UTC−11: a different local day
+      const days = await rollupDays();
+      expect(days).toContain(toUserDay(new Date(t), "Pacific/Pago_Pago"));
+      expect(days).not.toContain(toUserDay(new Date(t), "Pacific/Kiritimati"));
+    } finally {
+      await db.update(schema.users).set({ timezone: "UTC", timezoneSetAt: null }).where(eq(schema.users.id, userId));
+      await db.delete(schema.dailyRollup).where(eq(schema.dailyRollup.userId, userId));
+      await db.delete(schema.xpLedger).where(eq(schema.xpLedger.userId, userId));
+    }
+  });
+
   it("rejects missing or wrong tokens with 401", async () => {
     expect((await post(payload([]), null)).status).toBe(401);
     expect((await post(payload([]), "nope")).status).toBe(401);

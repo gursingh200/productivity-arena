@@ -196,6 +196,12 @@ that minute, so past data can't be rewritten. A device can only ever write its o
 user's data. Then recompute `daily_rollup` + derived XP for
 touched days, evaluate quests, return status. Idempotent; safe to resend.
 
+**Timezones.** A person's days follow their Mac's timezone, sent as `device.timezone`
+with each upload, so the website and the Mac's dashboard count the same day. A change
+deletes and rebuilds that person's rollups and derived XP for the last 14 days (the
+days whose minutes are still kept). Accounts no Mac has set (`users.timezone_set_at`
+is null) are moved to `ARENA_TIMEZONE` on each deploy.
+
 **Start date.** With `ARENA_START_DATE` (deployment env, `YYYY-MM-DD` in the company
 timezone), minutes and chats before that day are ignored at ingest, no XP is
 written for earlier days, and `pnpm db:migrate` deletes older minutes, chats,

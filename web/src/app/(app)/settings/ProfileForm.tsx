@@ -78,7 +78,7 @@ export default function ProfileForm({ initialName, initialHandle, initialBio, in
         <select id="tz" className="input" value={timezone} onChange={(e) => setTimezone(e.target.value)}>
           {timezones.map((tz) => <option key={tz} value={tz}>{tz}</option>)}
         </select>
-        <span className="help">Your days and daily quests follow this timezone.</span>
+        <span className="help">Your days and daily quests follow this timezone. Arena on your Mac keeps it in sync with your Mac’s.</span>
       </div>
       {message ? <p className={`notice${message.type === "err" ? " notice-err" : ""}`} role="status">{message.text}</p> : null}
       <button type="submit" className="btn" disabled={saving}>{saving ? "Saving…" : "Save profile"}</button>
