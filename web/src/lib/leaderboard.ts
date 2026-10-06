@@ -12,13 +12,23 @@ import type { League } from "@/lib/leagues";
 import { shares, visibility, type Category, type Sharer } from "@/lib/sharing";
 import { rankBy, weeklyStandings, type Standing } from "@/lib/standings";
 
-export type LeaderboardTab = "weekly_xp" | "human_hours" | "agent_hours" | "level";
+export type LeaderboardTab = "weekly_xp" | "human_hours" | "agent_hours" | "agent_total" | "parallelism" | "level";
+
+/** Parallelism ranks only people with at least this much agent (clock) time in the week. */
+export const PARALLELISM_MIN_AGENT_SEC = 5 * 3600;
+
+/** Total agent hours ÷ clock agent hours: 1.0 = one thing at a time. */
+export function parallelism(s: Pick<Standing, "weeklyAgentSec" | "weeklyAgentWorkSec">): number {
+  return s.weeklyAgentSec > 0 ? Math.max(1, s.weeklyAgentWorkSec / s.weeklyAgentSec) : 0;
+}
 
 export const TAB_CATEGORY: Record<LeaderboardTab, Category> = {
   weekly_xp: "xp",
   level: "xp",
   human_hours: "human",
   agent_hours: "agents",
+  agent_total: "agents",
+  parallelism: "agents",
 };
 
 export interface LeaderboardRow {
@@ -47,6 +57,8 @@ const VALUE: Record<LeaderboardTab, (s: Standing) => number> = {
   weekly_xp: (s) => s.weeklyXp,
   human_hours: (s) => s.weeklyHumanSec,
   agent_hours: (s) => s.weeklyAgentSec,
+  agent_total: (s) => s.weeklyAgentWorkSec,
+  parallelism: (s) => (s.weeklyAgentSec >= PARALLELISM_MIN_AGENT_SEC ? Math.round(parallelism(s) * 100) / 100 : 0),
   level: (s) => s.totalXp,
 };
 
@@ -66,7 +78,8 @@ export async function leaderboard(tab: LeaderboardTab, viewer: Sharer, now: Date
   // On a board: people who share this category with this viewer (the viewer included).
   const onBoard = standings.filter((s) => {
     const owner = byId.get(s.userId);
-    return owner !== undefined && visibility(me, owner)[category];
+    return owner !== undefined && visibility(me, owner)[category]
+      && (tab !== "parallelism" || s.weeklyAgentSec >= PARALLELISM_MIN_AGENT_SEC);
   });
   const away = await awayToday(onBoard.map((s) => s.userId), now);
   const rows = rankBy(onBoard, VALUE[tab]).map(({ item, rank }) => {

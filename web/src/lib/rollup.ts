@@ -70,6 +70,14 @@ export async function recomputeDay(userId: string, day: string, timezone: string
     .slice(0, 10)
     .map((a) => ({ ...a, pct: appSecTotal > 0 ? Math.round((a.sec / appSecTotal) * 100) : 0 }));
 
+  // Total agent time and most threads at once, sub-agents included (older rows: clock time and sessions).
+  const [threaded] = await db.select({
+    work: sql<number>`COALESCE(SUM(COALESCE(${minuteAgent.workSec}, ${minuteAgent.agentSec})), 0)`,
+  }).from(minuteAgent).where(and(eq(minuteAgent.userId, userId), gte(minuteAgent.t, start), lt(minuteAgent.t, end)));
+  const perMinute = await db.select({ n: sql<number>`SUM(COALESCE(${minuteAgent.threads}, ${minuteAgent.sessions}))` })
+    .from(minuteAgent).where(and(eq(minuteAgent.userId, userId), gte(minuteAgent.t, start), lt(minuteAgent.t, end)))
+    .groupBy(minuteAgent.t);
+
   const focus = computeFocusXp(minutes);
   const values = {
     humanSec: minutes.reduce((s, m) => s + m.humanSec, 0),
@@ -82,6 +90,8 @@ export async function recomputeDay(userId: string, day: string, timezone: string
     tokensOut: sum((t) => t.out),
     tokensByAgent,
     peakParallel: minutes.reduce((s, m) => Math.max(s, m.peak), 0),
+    agentWorkSec: Math.max(minutes.reduce((s, m) => s + m.agentSec, 0), Number(threaded?.work ?? 0)),
+    peakThreads: perMinute.reduce((s, r) => Math.max(s, Number(r.n)), 0),
     longestFocusSec: focus.longestBlockSec,
     focusBlocks: focus.blocks,
     topApps,

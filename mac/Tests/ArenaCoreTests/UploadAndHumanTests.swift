@@ -29,7 +29,7 @@ struct PayloadTests {
         #expect(meeting["id"] as? String == "us.zoom.xos" && meeting["name"] as? String == "Zoom" && meeting["sec"] as? Int == 20)
         #expect(json["deletedChats"] == nil)
         let agentRow = try #require((minute["agents"] as? [[String: Any]])?.first)
-        #expect(Set(agentRow.keys) == ["agent", "sec", "sessions", "peak", "tokensIn", "tokensCached", "tokensOut"])
+        #expect(Set(agentRow.keys) == ["agent", "sec", "sessions", "peak", "tokensIn", "tokensCached", "tokensOut", "workSec", "threads"])
         let chat = try #require((json["chats"] as? [[String: Any]])?.first)
         #expect(Set(chat.keys) == ["agent", "chatId", "firstAt", "lastAt", "agentSec", "turns", "tokensIn", "tokensCached", "tokensOut"])
         #expect(chat["chatId"] as? String == chatId(agent: "claude", sessionId: "s1"))

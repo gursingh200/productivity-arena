@@ -19,7 +19,7 @@ export interface DayView {
   today: string;
   /** Earliest day there can be data for (start date or first rollup). */
   firstDay: string;
-  totals: { humanSec: number; agentSec: number; meetingSec: number; xp: number; focusBlocks: number; longestFocusSec: number };
+  totals: { humanSec: number; agentSec: number; agentWorkSec: number; peakThreads: number; meetingSec: number; xp: number; focusBlocks: number; longestFocusSec: number };
   /** Null when the day's minutes are no longer kept. */
   hours: HourTotals[] | null;
   xp: Array<{ id: string; source: string; xp: number; reason: string }>;
@@ -69,6 +69,8 @@ export async function loadDay(user: Pick<User, "id" | "timezone">, day: string, 
     totals: {
       humanSec: rollup?.humanSec ?? 0,
       agentSec: rollup?.agentSec ?? 0,
+      agentWorkSec: Math.max(rollup?.agentWorkSec ?? 0, rollup?.agentSec ?? 0),
+      peakThreads: rollup?.peakThreads ?? 0,
       meetingSec: rollup?.meetingSec ?? 0,
       xp: xp.reduce((s, r) => s + r.xp, 0),
       focusBlocks: rollup?.focusBlocks ?? 0,

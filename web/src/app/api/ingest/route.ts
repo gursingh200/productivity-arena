@@ -107,6 +107,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         agentRows.push({
           userId: auth.userId, deviceId: auth.deviceId, t, agent: a.agent, sessions: a.sessions, agentSec: a.sec,
           peak: a.peak, tokensIn: a.tokensIn, tokensCached: a.tokensCached, tokensOut: a.tokensOut,
+          // Total can't be less than clock time; older Macs don't send it.
+          workSec: a.workSec === undefined ? null : Math.max(a.sec, a.workSec),
+          threads: a.threads ?? null,
         });
       }
     }

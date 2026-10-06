@@ -10,6 +10,8 @@ const TABS: Array<{ id: LeaderboardTab; label: string }> = [
   { id: "weekly_xp", label: "Weekly XP" },
   { id: "human_hours", label: "Human hours" },
   { id: "agent_hours", label: "Agent hours" },
+  { id: "agent_total", label: "Total agent hours" },
+  { id: "parallelism", label: "Parallelism" },
   { id: "level", label: "Level" },
 ];
 const LEAGUES = ["all", "legend", "diamond", "gold", "silver", "bronze"] as const;
@@ -28,7 +30,8 @@ export default async function LeaderboardPage({ searchParams }: { searchParams: 
   const href = (next: { tab?: string; league?: string }) =>
     `/leaderboard?${new URLSearchParams({ tab: next.tab ?? tab.id, league: next.league ?? league })}`;
   const score = (value: number) =>
-    tab.id === "weekly_xp" ? `${compact(value)} XP` : tab.id === "level" ? `Level ${value}` : hours(value);
+    tab.id === "weekly_xp" ? `${compact(value)} XP` : tab.id === "level" ? `Level ${value}`
+      : tab.id === "parallelism" ? `${value.toFixed(1)}×` : hours(value);
   // Split bars share one scale so people can be compared by length.
   const maxTotal = Math.max(1, ...shown.map((r) => (r.weeklyHumanSec ?? 0) + (r.weeklyAgentSec ?? 0)));
 
@@ -55,6 +58,8 @@ export default async function LeaderboardPage({ searchParams }: { searchParams: 
           <Link key={t.id} className="tab" href={href({ tab: t.id })} aria-current={t.id === tab.id ? "true" : undefined}>{t.label}</Link>
         ))}
       </nav>
+      {tab.id === "agent_total" ? <p className="help" style={{ margin: "-6px 0 14px" }}>Every agent thread counted on its own: sub-agents running side by side each add their time.</p> : null}
+      {tab.id === "parallelism" ? <p className="help" style={{ margin: "-6px 0 14px" }}>Total agent hours divided by agent hours. 1.0× means one thing at a time; higher means more running side by side. Needs 5 agent hours this week.</p> : null}
 
       <div className="board">
         {board.locked ? null : <div className="board-head">

@@ -24,6 +24,42 @@ public enum SessionTimeline {
         public var totalSeconds: Double { secondsByMinute.values.reduce(0, +) }
     }
 
+    /// Clock time plus total time: each thread of the session (the main one
+    /// and every sub-agent) is timed on its own and the results are added up,
+    /// never less than the clock time. `threads` counts the threads that
+    /// worked in each minute.
+    public struct Threaded: Equatable {
+        public var clock: Result
+        public var work: [MinuteT: Double]
+        public var threads: [MinuteT: Int]
+    }
+
+    public static func computeThreaded(
+        events: [AgentEvent],
+        tokens: [TokenRecord],
+        requireTokens: Bool,
+        clipFrom: Date? = nil
+    ) -> Threaded {
+        let clock = compute(events: events, tokens: tokens, requireTokens: requireTokens, clipFrom: clipFrom)
+        var work: [MinuteT: Double] = [:]
+        var threads: [MinuteT: Int] = [:]
+        for (thread, threadEvents) in Dictionary(grouping: events, by: \.thread) {
+            // Sub-agents have no human turns of their own; their events are the evidence.
+            let result = thread.isEmpty
+                ? compute(events: threadEvents, tokens: tokens, requireTokens: requireTokens, clipFrom: clipFrom)
+                : compute(events: threadEvents, tokens: [], requireTokens: false, clipFrom: clipFrom)
+            for (t, sec) in result.secondsByMinute where sec > 0 {
+                work[t, default: 0] += sec
+                threads[t, default: 0] += 1
+            }
+        }
+        for (t, sec) in clock.secondsByMinute {
+            work[t] = max(work[t] ?? 0, sec)
+            threads[t] = max(threads[t] ?? 0, 1)
+        }
+        return Threaded(clock: clock, work: work.filter { clock.secondsByMinute[$0.key] != nil }, threads: threads)
+    }
+
     public static func compute(
         events unsorted: [AgentEvent],
         tokens: [TokenRecord],

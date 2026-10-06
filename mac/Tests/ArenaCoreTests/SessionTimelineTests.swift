@@ -69,3 +69,30 @@ struct SessionTimelineTests {
         #expect(r.totalSeconds == 40)
     }
 }
+
+@Suite struct ThreadedTimelineTests {
+    func sub(_ iso: String, _ thread: String) -> AgentEvent { AgentEvent(timestamp: at(iso), kind: .agent, thread: thread) }
+
+    @Test func subagentsInParallelAddUpButTheClockCountsOnce() {
+        // The main thread hands off at 10:00 and hears back at 10:20; two sub-agents work 10:00–10:20 at once.
+        var events = [human("2026-10-05T09:59:00Z"), agent("2026-10-05T10:00:00Z"), agent("2026-10-05T10:20:00Z")]
+        for thread in ["a", "b"] {
+            for minute in stride(from: 0, through: 20, by: 5) {
+                events.append(sub(String(format: "2026-10-05T10:%02d:00Z", minute), thread))
+            }
+        }
+        let r = SessionTimeline.computeThreaded(events: events, tokens: [], requireTokens: false)
+        let clock = r.clock.totalSeconds
+        let work = r.work.values.reduce(0, +)
+        #expect(abs(clock - 21 * 60) < 61) // 09:59 to 10:20
+        #expect(abs(work - 2 * 20 * 60) < 121) // two sub-agents for 20 minutes each; the waiting main thread adds ~nothing
+        #expect(r.threads[minuteOf(at("2026-10-05T10:10:00Z"))] == 2)
+    }
+
+    @Test func withoutSubagentsTotalEqualsClock() {
+        let events = [human("2026-10-05T10:00:00Z"), agent("2026-10-05T10:01:00Z"), agent("2026-10-05T10:04:00Z")]
+        let r = SessionTimeline.computeThreaded(events: events, tokens: [], requireTokens: false)
+        #expect(r.work == r.clock.secondsByMinute)
+        #expect(Set(r.threads.values) == [1])
+    }
+}

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { leaderboard, type LeaderboardTab } from "@/lib/leaderboard";
 import { getViewer } from "@/lib/viewer";
 
-const TABS: LeaderboardTab[] = ["weekly_xp", "human_hours", "agent_hours", "level"];
+const TABS: LeaderboardTab[] = ["weekly_xp", "human_hours", "agent_hours", "agent_total", "parallelism", "level"];
 
 /** GET /api/leaderboard?tab= — the same sharing-filtered board the page shows. */
 export async function GET(req: NextRequest): Promise<NextResponse> {

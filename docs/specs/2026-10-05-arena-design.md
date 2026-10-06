@@ -198,6 +198,15 @@ that minute, so past data can't be rewritten. A device can only ever write its o
 user's data. Then recompute `daily_rollup` + derived XP for
 touched days, evaluate quests, return status. Idempotent; safe to resend.
 
+**Total agent time.** Agent hours are clock time: a chat and its sub-agents count
+once. Claude sub-agent log files are also their own *threads* (`agent_event.thread`);
+each thread is timed alone and the results are added up (never below clock time) and
+sent per minute as `workSec`, with `threads` = threads working that minute. The server
+keeps `minute_agent.work_sec/threads` and `daily_rollup.agent_work_sec/peak_threads`
+(older data: total = clock). XP still follows clock time. Leaderboard tabs: **Total
+agent hours** and **Parallelism** (week's total ÷ clock agent hours, shown as 1.8×,
+only for people with at least 5 agent hours that week).
+
 **Timezones.** A person's days follow their Mac's timezone, sent as `device.timezone`
 with each upload, so the website and the Mac's dashboard count the same day. A change
 deletes and rebuilds that person's rollups and derived XP for the last 14 days (the

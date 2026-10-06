@@ -1,7 +1,7 @@
 import type { DayTotals, ProfileData } from "@/lib/profile";
 import type { Category } from "@/lib/sharing";
 import { NotShared } from "./NotShared";
-import { change, durationParts, firstName, shortDay } from "./format";
+import { change, durationParts, firstName, hours, shortDay } from "./format";
 
 type Key = "humanSec" | "agentSec" | "meetingSec";
 
@@ -39,6 +39,11 @@ export function Scoreboard({ data }: { data: ProfileData }) {
                 <Figure total={total} days={week.days.map((d) => d[f.key] ?? 0)} elapsed={elapsed} peak={peak} tone={f.tone}
                   pct={change(soFar(week.days, f.key), soFar(lastWeek.days, f.key))} />
               )}
+              {f.key === "agentSec" && week.agentSec && week.agentWorkSec ? (
+                <div className="figure-note">
+                  {hours(week.agentWorkSec)} total with sub-agents, {(week.agentWorkSec / week.agentSec).toFixed(1)}× parallel
+                </div>
+              ) : null}
             </div>
           );
         })}

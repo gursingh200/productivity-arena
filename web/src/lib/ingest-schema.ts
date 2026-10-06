@@ -14,6 +14,10 @@ const AgentEntrySchema = z.object({
   tokensIn: z.number().int().min(0).default(0),
   tokensCached: z.number().int().min(0).default(0),
   tokensOut: z.number().int().min(0).default(0),
+  /** Total seconds, every thread (sub-agents too) counted on its own. */
+  workSec: z.number().int().min(0).max(60 * 1000).optional(),
+  /** Threads working in the minute, sub-agents included. */
+  threads: z.number().int().min(0).max(1000).optional(),
 });
 
 /** Seconds a call app held the microphone in the minute. */

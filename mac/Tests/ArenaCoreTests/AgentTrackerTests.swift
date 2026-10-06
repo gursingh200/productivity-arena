@@ -136,7 +136,7 @@ struct AgentTrackerTests {
         let box = try Sandbox()
         let t = minuteOf(at("2026-10-05T10:00:00Z"))
         try box.tracker().recordBusyProcesses(["gemini"], minute: t)
-        #expect(try box.store.agentEntries(t: t) == [AgentEntry(agent: "gemini", sec: 60, sessions: 1, peak: 1, tokensIn: 0, tokensCached: 0, tokensOut: 0)])
+        #expect(try box.store.agentEntries(t: t) == [AgentEntry(agent: "gemini", sec: 60, sessions: 1, peak: 1, tokensIn: 0, tokensCached: 0, tokensOut: 0, workSec: 60, threads: 1)])
     }
 }
 

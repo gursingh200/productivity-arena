@@ -46,6 +46,12 @@ public struct ClaudeSource: JSONLAgentSource {
         return stem
     }
 
+    /// Sub-agent files are their own threads, named by their file stem.
+    public func threadId(forFile path: String) -> String {
+        let url = URL(fileURLWithPath: path)
+        return url.deletingLastPathComponent().lastPathComponent == "subagents" ? url.deletingPathExtension().lastPathComponent : ""
+    }
+
     public func events(fromLine line: Data) -> [AgentEvent] {
         guard let obj = jsonObject(line),
               let type = obj["type"] as? String,

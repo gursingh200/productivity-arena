@@ -30,6 +30,12 @@ public protocol JSONLAgentSource: Sendable {
     func sessionId(forFile path: String) -> String
     /// Meaningful events in one log line (usually zero or one).
     func events(fromLine line: Data) -> [AgentEvent]
+    /// Which thread of the session a file is: "" for the main one, else a sub-agent id.
+    func threadId(forFile path: String) -> String
+}
+
+public extension JSONLAgentSource {
+    func threadId(forFile path: String) -> String { "" }
 }
 
 /// All log-file based agents, in a fixed order.

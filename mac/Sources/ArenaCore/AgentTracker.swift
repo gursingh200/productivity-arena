@@ -45,12 +45,13 @@ public final class AgentTracker {
                 ?? .distantPast
             let sessionEvents = try store.events(agent: agent, session: session, from: loadFrom)
             let tokens = try store.tokenRecords(agent: agent, session: session, from: loadFrom)
-            let result = SessionTimeline.compute(events: sessionEvents, tokens: tokens,
-                                                 requireTokens: requireTokens, clipFrom: clipFrom)
+            let threaded = SessionTimeline.computeThreaded(events: sessionEvents, tokens: tokens,
+                                                           requireTokens: requireTokens, clipFrom: clipFrom)
+            let result = threaded.clock
 
             let previous = try store.sessionMinutes(agent: agent, session: session, from: fromMinute)
             try store.replaceSessionMinutes(agent: agent, session: session, from: fromMinute,
-                                            rows: result.secondsByMinute)
+                                            rows: result.secondsByMinute, work: threaded.work, threads: threaded.threads)
 
             let changed = Set(previous.keys).union(result.secondsByMinute.keys).union(tokenMinutes)
             for t in changed { try store.markMinuteDirty(t) }
@@ -65,9 +66,11 @@ public final class AgentTracker {
             let fromMinute = minuteOf(first)
             let events = try store.events(agent: agent, session: session, from: .distantPast)
             let tokens = try store.tokenRecords(agent: agent, session: session, from: .distantPast)
-            let result = SessionTimeline.compute(events: events, tokens: tokens, requireTokens: requireTokens)
+            let threaded = SessionTimeline.computeThreaded(events: events, tokens: tokens, requireTokens: requireTokens)
+            let result = threaded.clock
             let previous = try store.sessionMinutes(agent: agent, session: session, from: fromMinute)
-            try store.replaceSessionMinutes(agent: agent, session: session, from: fromMinute, rows: result.secondsByMinute)
+            try store.replaceSessionMinutes(agent: agent, session: session, from: fromMinute, rows: result.secondsByMinute,
+                                            work: threaded.work, threads: threaded.threads)
             for t in Set(previous.keys).union(result.secondsByMinute.keys) { try store.markMinuteDirty(t) }
             try store.markChatDirty(agent: agent, session: session)
         }
@@ -132,11 +135,16 @@ public final class AgentTracker {
         }
 
         let session = source.sessionId(forFile: path)
+        let thread = source.threadId(forFile: path)
         while true {
             // Parsing creates many temporary Foundation objects; release them per chunk.
             let (chunk, events) = try autoreleasepool {
                 let chunk = try LineReader.read(path: path, from: cursor.offset)
-                return (chunk, chunk.lines.flatMap { source.events(fromLine: $0) })
+                return (chunk, chunk.lines.flatMap { source.events(fromLine: $0) }.map { event -> AgentEvent in
+                    var event = event
+                    event.thread = thread
+                    return event
+                })
             }
             try ingest(agent: source.agent, session: session, events: events, requireTokens: source.requireTokens)
             let madeProgress = chunk.newOffset > cursor.offset

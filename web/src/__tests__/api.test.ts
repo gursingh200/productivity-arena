@@ -180,6 +180,25 @@ describe.skipIf(!DB_URL)("device API", async () => {
     }
   });
 
+  it("keeps total agent time (sub-agents counted separately) next to clock time", async () => {
+    const minute = (minutesAgo: number, sec: number, workSec?: number, threads?: number) => ({
+      t: minuteIso(minutesAgo), apps: [],
+      agents: [{ agent: "claude", sessions: 1, sec, peak: 1, tokensIn: 0, tokensCached: 0, tokensOut: 0,
+        ...(workSec === undefined ? {} : { workSec }), ...(threads === undefined ? {} : { threads }) }],
+    });
+    try {
+      // One minute with three threads (180 s total), one from an older Mac (no total sent).
+      expect((await post(payload([minute(3, 60, 180, 3), minute(2, 60)]))).status).toBe(200);
+      const [rollup] = await db.select().from(schema.dailyRollup).where(eq(schema.dailyRollup.userId, userId));
+      expect(rollup!.agentSec).toBe(120);
+      expect(rollup!.agentWorkSec).toBe(240);
+      expect(rollup!.peakThreads).toBe(3);
+    } finally {
+      await db.delete(schema.dailyRollup).where(eq(schema.dailyRollup.userId, userId));
+      await db.delete(schema.xpLedger).where(eq(schema.xpLedger.userId, userId));
+    }
+  });
+
   it("rejects missing or wrong tokens with 401", async () => {
     expect((await post(payload([]), null)).status).toBe(401);
     expect((await post(payload([]), "nope")).status).toBe(401);

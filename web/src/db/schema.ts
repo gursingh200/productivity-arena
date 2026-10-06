@@ -169,6 +169,10 @@ export const minuteAgent = pgTable(
     tokensIn: bigint("tokens_in", { mode: "number" }).notNull().default(0),
     tokensCached: bigint("tokens_cached", { mode: "number" }).notNull().default(0),
     tokensOut: bigint("tokens_out", { mode: "number" }).notNull().default(0),
+    /** Total seconds with every thread (main and sub-agents) counted on its own; null from older Macs (= agent_sec). */
+    workSec: integer("work_sec"),
+    /** Threads working in the minute, sub-agents included; null from older Macs (= sessions). */
+    threads: smallint("threads"),
   },
   (table) => [
     primaryKey({ columns: [table.deviceId, table.t, table.agent] }),
@@ -248,6 +252,10 @@ export const dailyRollup = pgTable(
     // tokens by agent { claude: { in, cached, out }, ... }
     tokensByAgent: jsonb("tokens_by_agent").notNull().default({}),
     peakParallel: smallint("peak_parallel").notNull().default(0),
+    /** Total agent seconds, sub-agents counted separately (≥ agent_sec). */
+    agentWorkSec: integer("agent_work_sec").notNull().default(0),
+    /** Most threads working at once, sub-agents included. */
+    peakThreads: smallint("peak_threads").notNull().default(0),
     longestFocusSec: integer("longest_focus_sec").notNull().default(0),
     focusBlocks: smallint("focus_blocks").notNull().default(0),
     // [{ id, name, sec, pct }]

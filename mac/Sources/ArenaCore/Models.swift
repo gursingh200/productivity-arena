@@ -37,12 +37,15 @@ public struct AgentEvent: Equatable, Sendable {
     public var kind: EventKind
     public var tokens: TokenUsage?
     public var tokenKey: String?
+    /// Which thread of the session: "" for the main one, else a sub-agent's id.
+    public var thread: String
 
-    public init(timestamp: Date, kind: EventKind, tokens: TokenUsage? = nil, tokenKey: String? = nil) {
+    public init(timestamp: Date, kind: EventKind, tokens: TokenUsage? = nil, tokenKey: String? = nil, thread: String = "") {
         self.timestamp = timestamp
         self.kind = kind
         self.tokens = tokens
         self.tokenKey = tokenKey
+        self.thread = thread
     }
 }
 
@@ -127,8 +130,13 @@ public struct AgentEntry: Codable, Equatable {
     public var tokensIn: Int64
     public var tokensCached: Int64
     public var tokensOut: Int64
+    /// Total seconds: each thread (main and every sub-agent) counted on its own, ≥ sec.
+    public var workSec: Int?
+    /// Threads working in this minute, sub-agents included.
+    public var threads: Int?
 
-    public init(agent: String, sec: Int, sessions: Int, peak: Int, tokensIn: Int64, tokensCached: Int64, tokensOut: Int64) {
+    public init(agent: String, sec: Int, sessions: Int, peak: Int, tokensIn: Int64, tokensCached: Int64, tokensOut: Int64,
+                workSec: Int? = nil, threads: Int? = nil) {
         self.agent = agent
         self.sec = sec
         self.sessions = sessions
@@ -136,6 +144,8 @@ public struct AgentEntry: Codable, Equatable {
         self.tokensIn = tokensIn
         self.tokensCached = tokensCached
         self.tokensOut = tokensOut
+        self.workSec = workSec
+        self.threads = threads
     }
 }
 

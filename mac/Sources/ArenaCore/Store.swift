@@ -88,6 +88,16 @@ public final class Store {
         CREATE INDEX IF NOT EXISTS active_minute_t ON active_minute(t);
         """)
         try migrateActiveMinutes()
+        try addColumnIfMissing("agent_event", "thread", "TEXT NOT NULL DEFAULT ''")
+        try addColumnIfMissing("session_minute", "work", "REAL NOT NULL DEFAULT 0")
+        try addColumnIfMissing("session_minute", "threads", "INTEGER NOT NULL DEFAULT 1")
+    }
+
+    /// Thread ids and total time came later: older rows default to the main
+    /// thread, and a `work` of 0 is read as equal to `sec`.
+    private func addColumnIfMissing(_ table: String, _ column: String, _ definition: String) throws {
+        let columns = try query("SELECT name FROM pragma_table_info(?);", [.text(table)]) { $0.text(0) }
+        if !columns.contains(column) { try execute("ALTER TABLE \(table) ADD COLUMN \(column) \(definition);") }
     }
 
     /// Version 2 counts human time as whole active minutes. Minutes recorded by
@@ -217,8 +227,8 @@ public final class Store {
 
     public func insertEvents(agent: String, session: String, events: [AgentEvent]) throws {
         for e in events {
-            try run("INSERT OR IGNORE INTO agent_event(agent, session, ts_ms, kind) VALUES(?,?,?,?);",
-                    [.text(agent), .text(session), .int(ms(e.timestamp)), .int(Int64(e.kind.rawValue))])
+            try run("INSERT OR IGNORE INTO agent_event(agent, session, ts_ms, kind, thread) VALUES(?,?,?,?,?);",
+                    [.text(agent), .text(session), .int(ms(e.timestamp)), .int(Int64(e.kind.rawValue)), .text(e.thread)])
         }
     }
 
@@ -260,9 +270,9 @@ public final class Store {
     }
 
     public func events(agent: String, session: String, from: Date) throws -> [AgentEvent] {
-        try query("SELECT ts_ms, kind FROM agent_event WHERE agent=? AND session=? AND ts_ms >= ? ORDER BY ts_ms;",
+        try query("SELECT ts_ms, kind, thread FROM agent_event WHERE agent=? AND session=? AND ts_ms >= ? ORDER BY ts_ms;",
                   [.text(agent), .text(session), .int(ms(from))]) {
-            AgentEvent(timestamp: dateOfMs($0.int(0)), kind: EventKind(rawValue: Int($0.int(1))) ?? .agent)
+            AgentEvent(timestamp: dateOfMs($0.int(0)), kind: EventKind(rawValue: Int($0.int(1))) ?? .agent, thread: $0.text(2))
         }
     }
 
@@ -284,13 +294,17 @@ public final class Store {
         return Dictionary(rows, uniquingKeysWith: +)
     }
 
-    /// Replaces a session's minutes from `from` onward with `rows`.
-    public func replaceSessionMinutes(agent: String, session: String, from: MinuteT, rows: [MinuteT: Double]) throws {
+    /// Replaces a session's minutes from `from` onward with `rows`: clock
+    /// seconds, plus (when known) total seconds summed over its threads and
+    /// how many threads worked in each minute.
+    public func replaceSessionMinutes(agent: String, session: String, from: MinuteT, rows: [MinuteT: Double],
+                                      work: [MinuteT: Double] = [:], threads: [MinuteT: Int] = [:]) throws {
         try run("DELETE FROM session_minute WHERE agent=? AND session=? AND t >= ?;",
                 [.text(agent), .text(session), .int(from)])
         for (t, sec) in rows where t >= from && sec > 0 {
-            try run("INSERT INTO session_minute(agent, session, t, sec) VALUES(?,?,?,?);",
-                    [.text(agent), .text(session), .int(t), .double(sec)])
+            try run("INSERT INTO session_minute(agent, session, t, sec, work, threads) VALUES(?,?,?,?,?,?);",
+                    [.text(agent), .text(session), .int(t), .double(sec), .double(max(sec, work[t] ?? sec)),
+                     .int(Int64(max(1, threads[t] ?? 1)))])
         }
     }
 
@@ -307,11 +321,15 @@ public final class Store {
 
     /// Per-agent rows for one minute, as sent in the ingest payload.
     public func agentEntries(t: MinuteT) throws -> [AgentEntry] {
-        struct Time { var sec: Double; var sessions: Int }
+        struct Time { var sec: Double; var sessions: Int; var work: Double; var threads: Int }
         var times: [String: Time] = [:]
-        let timeRows = try query("SELECT agent, SUM(sec), COUNT(*) FROM session_minute WHERE t = ? GROUP BY agent;",
-                                 [.int(t)]) { ($0.text(0), $0.double(1), Int($0.int(2))) }
-        for (agent, sec, sessions) in timeRows { times[agent] = Time(sec: sec, sessions: sessions) }
+        let timeRows = try query("""
+            SELECT agent, SUM(sec), COUNT(*), SUM(MAX(work, sec)), SUM(MAX(threads, 1)) FROM session_minute
+            WHERE t = ? GROUP BY agent;
+            """, [.int(t)]) { ($0.text(0), $0.double(1), Int($0.int(2)), $0.double(3), Int($0.int(4))) }
+        for (agent, sec, sessions, work, threads) in timeRows {
+            times[agent] = Time(sec: sec, sessions: sessions, work: work, threads: threads)
+        }
 
         var tokens: [String: TokenUsage] = [:]
         let tokenRows = try query("""
@@ -324,12 +342,13 @@ public final class Store {
 
         let agents = Set(times.keys).union(tokens.keys).sorted()
         return agents.compactMap { agent in
-            let time = times[agent] ?? Time(sec: 0, sessions: 0)
+            let time = times[agent] ?? Time(sec: 0, sessions: 0, work: 0, threads: 0)
             let usage = tokens[agent] ?? TokenUsage(input: 0, cached: 0, output: 0)
             let sec = Int(time.sec.rounded())
             if sec == 0 && usage.input == 0 && usage.cached == 0 && usage.output == 0 { return nil }
             return AgentEntry(agent: agent, sec: sec, sessions: time.sessions, peak: time.sessions,
-                              tokensIn: usage.input, tokensCached: usage.cached, tokensOut: usage.output)
+                              tokensIn: usage.input, tokensCached: usage.cached, tokensOut: usage.output,
+                              workSec: max(sec, Int(time.work.rounded())), threads: time.threads)
         }
     }
 

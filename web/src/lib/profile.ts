@@ -33,6 +33,8 @@ export interface WeekTotals {
   humanSec: number | null;
   agentSec: number | null;
   meetingSec: number | null;
+  /** Total agent time with sub-agents counted separately; null when agents are hidden. */
+  agentWorkSec: number | null;
 }
 
 export interface AgentTotals {
@@ -133,7 +135,10 @@ export async function loadProfile(handle: string, viewer: User, now = new Date()
   const { thisWeek, lastWeek } = weekDays(now);
   const weekOf = (start: string): WeekTotals => {
     const days = totalsFor(start, 7);
-    return { start, days, humanSec: sum(days, "humanSec"), agentSec: sum(days, "agentSec"), meetingSec: sum(days, "meetingSec") };
+    const agentSec = sum(days, "agentSec");
+    const agentWorkSec = agentSec === null ? null
+      : days.reduce((s, d) => s + Math.max(byDay.get(d.day)?.agentWorkSec ?? 0, byDay.get(d.day)?.agentSec ?? 0), 0);
+    return { start, days, humanSec: sum(days, "humanSec"), agentSec, meetingSec: sum(days, "meetingSec"), agentWorkSec };
   };
   const recent30 = rollups.filter((r) => r.day >= start30);
 

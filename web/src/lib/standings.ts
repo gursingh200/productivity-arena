@@ -23,6 +23,8 @@ export interface Standing {
   weeklyXp: number;
   weeklyHumanSec: number;
   weeklyAgentSec: number;
+  /** Total agent time this week, sub-agents counted separately (≥ weeklyAgentSec). */
+  weeklyAgentWorkSec: number;
   totalXp: number;
   level: number;
   league: League;
@@ -61,8 +63,9 @@ export async function standingsForWeek(thisWeek: string): Promise<Standing[]> {
       human: sql<number>`SUM(${dailyRollup.humanSec})`,
       focus: sql<number>`SUM(${dailyRollup.humanSec} + ${dailyRollup.meetingSec})`,
       agent: sql<number>`SUM(${dailyRollup.agentSec})`,
+      work: sql<number>`SUM(GREATEST(${dailyRollup.agentWorkSec}, ${dailyRollup.agentSec}))`,
     }).from(dailyRollup).where(and(gte(dailyRollup.day, from), lt(dailyRollup.day, to))).groupBy(dailyRollup.userId);
-    return new Map(rows.map((r) => [r.userId, { human: Number(r.human), focus: Number(r.focus), agent: Number(r.agent) }]));
+    return new Map(rows.map((r) => [r.userId, { human: Number(r.human), focus: Number(r.focus), agent: Number(r.agent), work: Number(r.work) }]));
   };
 
   const weekXp = await xpBetween(thisWeek, nextWeek);
@@ -82,6 +85,7 @@ export async function standingsForWeek(thisWeek: string): Promise<Standing[]> {
       weeklyXp: weekXp.get(u.id) ?? 0,
       weeklyHumanSec: weekTime.get(u.id)?.human ?? 0,
       weeklyAgentSec: weekTime.get(u.id)?.agent ?? 0,
+      weeklyAgentWorkSec: weekTime.get(u.id)?.work ?? 0,
       totalXp: total,
       level: computeLevel(total).level,
       league: leagueOf(leagues, u.id),

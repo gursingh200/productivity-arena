@@ -48,7 +48,8 @@ export default async function DayPage({ searchParams }: { searchParams: Promise<
       <div className="totals" style={{ marginTop: 24 }}>
         <div className="fact"><div className="fact-label"><i className="dot dot-human" style={{ marginRight: 8 }} />Human</div><div className="fact-value num">{duration(v.totals.humanSec)}</div>
           <div className="help">{v.totals.focusBlocks} focus block{v.totals.focusBlocks === 1 ? "" : "s"}{v.totals.longestFocusSec ? `, longest ${duration(v.totals.longestFocusSec)}` : ""}</div></div>
-        <div className="fact"><div className="fact-label"><i className="dot dot-agent" style={{ marginRight: 8 }} />Agents</div><div className="fact-value num">{duration(v.totals.agentSec)}</div></div>
+        <div className="fact"><div className="fact-label"><i className="dot dot-agent" style={{ marginRight: 8 }} />Agents</div><div className="fact-value num">{duration(v.totals.agentSec)}</div>
+          <div className="help">{duration(v.totals.agentWorkSec)} total with sub-agents{v.totals.peakThreads > 1 ? `, up to ${v.totals.peakThreads} at once` : ""}</div></div>
         <div className="fact"><div className="fact-label"><i className="dot dot-meeting" style={{ marginRight: 8 }} />Meetings</div><div className="fact-value num">{duration(v.totals.meetingSec)}</div></div>
         <div className="fact"><div className="fact-label">XP</div><div className="fact-value num">+{v.totals.xp.toLocaleString("en-US")}</div></div>
       </div>
