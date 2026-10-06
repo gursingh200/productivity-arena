@@ -6,7 +6,7 @@ import { authenticateDevice } from "@/lib/device-auth";
 import { IngestPayloadSchema, MAX_CHATS, MAX_MINUTES } from "@/lib/ingest-schema";
 import { adoptEarlierPairings } from "@/lib/device-merge";
 import { ingestCutoff, lockedMinutes, pruneMinutes } from "@/lib/retention";
-import { recomputeForDays } from "@/lib/rollup";
+import { recomputeForDays, refreshAgentTotals } from "@/lib/rollup";
 import { startInstant } from "@/lib/start-date";
 import { changeTimezone } from "@/lib/user-timezone";
 import { buildStatusPayload } from "@/lib/status";
@@ -142,6 +142,25 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   });
 
   await recomputeForDays(auth.userId, touchedDays);
+
+  // Locked minutes keep their clock time, human time and XP, but may fill in
+  // total agent time and thread counts (sent by Macs backfilling sub-agent threads).
+  const lockedWithTotals = recent.filter((m) => locked.has(new Date(m.t).getTime())
+    && m.agents.some((a) => a.workSec !== undefined || a.threads !== undefined));
+  if (lockedWithTotals.length) {
+    const totalDays = new Set<string>();
+    for (const m of lockedWithTotals) {
+      for (const a of m.agents) {
+        if (a.workSec === undefined && a.threads === undefined) continue;
+        await db.update(minuteAgent).set({
+          workSec: sql`GREATEST(${minuteAgent.agentSec}, ${a.workSec ?? 0})`,
+          threads: a.threads ?? null,
+        }).where(and(eq(minuteAgent.deviceId, auth.deviceId), eq(minuteAgent.t, new Date(m.t)), eq(minuteAgent.agent, a.agent)));
+      }
+      totalDays.add(toUserDay(new Date(m.t), timezone));
+    }
+    for (const day of totalDays) await refreshAgentTotals(auth.userId, day, timezone);
+  }
   await pruneMinutes(auth.userId);
   return NextResponse.json({ accepted: payload.minutes.length, status: await buildStatusPayload(auth.userId) });
 }

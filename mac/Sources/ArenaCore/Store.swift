@@ -276,6 +276,19 @@ public final class Store {
         }
     }
 
+    /// Marks stored events as belonging to a thread; returns how many matched.
+    public func setThread(agent: String, session: String, events: [AgentEvent], thread: String) throws -> Int {
+        var changed = 0
+        try transaction {
+            for e in events {
+                try run("UPDATE agent_event SET thread = ? WHERE agent=? AND session=? AND ts_ms=? AND kind=? AND thread <> ?;",
+                        [.text(thread), .text(agent), .text(session), .int(ms(e.timestamp)), .int(Int64(e.kind.rawValue)), .text(thread)])
+                changed += Int(sqlite3_changes(db))
+            }
+        }
+        return changed
+    }
+
     public func tokenRecords(agent: String, session: String, from: Date) throws -> [TokenRecord] {
         try query("""
             SELECT ts_ms, tokens_in, tokens_cached, tokens_out FROM agent_tokens

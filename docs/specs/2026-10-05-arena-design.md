@@ -203,7 +203,11 @@ once. Claude sub-agent log files are also their own *threads* (`agent_event.thre
 each thread is timed alone and the results are added up (never below clock time) and
 sent per minute as `workSec`, with `threads` = threads working that minute. The server
 keeps `minute_agent.work_sec/threads` and `daily_rollup.agent_work_sec/peak_threads`
-(older data: total = clock). XP still follows clock time. Leaderboard tabs: **Total
+(older data: total = clock). XP still follows clock time. Backfill: on first launch, 0.1.16 re-reads the Claude
+sub-agent logs still on disk, tags their stored events with threads, recomputes those
+chats and re-sends their minutes; the server lets locked minutes (> 24 h) change only
+`work_sec` and `threads`, refreshing just the day's `agent_work_sec`/`peak_threads`,
+so clock time and XP stay as they were. Leaderboard tabs: **Total
 agent hours** and **Parallelism** (week's total ÷ clock agent hours, shown as 1.8×,
 only for people with at least 5 agent hours that week).
 

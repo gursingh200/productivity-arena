@@ -76,6 +76,40 @@ public final class AgentTracker {
         }
     }
 
+    static let threadsKey = "schema.threads"
+
+    /// One-time backfill for total agent time: events stored before threads
+    /// were tracked are all on the main thread. Re-reads every Claude sub-agent
+    /// log still on disk, marks its stored events with their thread, and
+    /// recomputes those chats so past minutes get their total time too.
+    public func tagClaudeThreads() throws {
+        guard try store.value(Self.threadsKey) == nil else { return }
+        let source = ClaudeSource()
+        var parents = Set<String>()
+        for path in sessionFiles(for: source) {
+            let thread = source.threadId(forFile: path)
+            guard !thread.isEmpty else { continue }
+            let session = source.sessionId(forFile: path)
+            var offset: Int64 = 0
+            while true {
+                let (chunk, events) = try autoreleasepool {
+                    let chunk = try LineReader.read(path: path, from: offset)
+                    return (chunk, chunk.lines.flatMap { source.events(fromLine: $0) })
+                }
+                if try store.setThread(agent: source.agent, session: session, events: events, thread: thread) > 0 {
+                    parents.insert(session)
+                }
+                let madeProgress = chunk.newOffset > offset
+                offset = chunk.newOffset
+                if chunk.reachedEnd || !madeProgress { break }
+            }
+        }
+        for parent in parents.sorted() {
+            try recomputeSession(agent: source.agent, session: parent, requireTokens: source.requireTokens)
+        }
+        try store.setValue("1", for: Self.threadsKey)
+    }
+
     static let subagentMergeKey = "schema.subagents"
 
     /// One-time migration: version 1 stored each Claude sub-agent as its own

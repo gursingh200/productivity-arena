@@ -199,6 +199,27 @@ describe.skipIf(!DB_URL)("device API", async () => {
     }
   });
 
+  it("locked minutes accept total agent time but nothing else", async () => {
+    const minute = (sec: number, workSec?: number, threads?: number) => ({
+      t: minuteIso(30 * 60), apps: [],
+      agents: [{ agent: "claude", sessions: 1, sec, peak: 1, tokensIn: 0, tokensCached: 0, tokensOut: 0,
+        ...(workSec === undefined ? {} : { workSec }), ...(threads === undefined ? {} : { threads }) }],
+    });
+    try {
+      expect((await post(payload([minute(60)]))).status).toBe(200); // 30 hours ago: written once, then locked
+      const xpBefore = await db.select().from(schema.xpLedger).where(eq(schema.xpLedger.userId, userId));
+      expect((await post(payload([minute(5, 180, 3)]))).status).toBe(200); // tries to change clock time too
+      const [row] = await db.select().from(schema.minuteAgent).where(eq(schema.minuteAgent.userId, userId));
+      expect(row).toMatchObject({ agentSec: 60, workSec: 180, threads: 3 });
+      const [rollup] = await db.select().from(schema.dailyRollup).where(eq(schema.dailyRollup.userId, userId));
+      expect(rollup).toMatchObject({ agentSec: 60, agentWorkSec: 180, peakThreads: 3 });
+      expect(await db.select().from(schema.xpLedger).where(eq(schema.xpLedger.userId, userId))).toEqual(xpBefore);
+    } finally {
+      await db.delete(schema.dailyRollup).where(eq(schema.dailyRollup.userId, userId));
+      await db.delete(schema.xpLedger).where(eq(schema.xpLedger.userId, userId));
+    }
+  });
+
   it("rejects missing or wrong tokens with 401", async () => {
     expect((await post(payload([]), null)).status).toBe(401);
     expect((await post(payload([]), "nope")).status).toBe(401);

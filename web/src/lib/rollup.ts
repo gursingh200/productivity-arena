@@ -146,3 +146,21 @@ async function upsertXp(userId: string, day: string, source: XpSource, sourceKey
       set: { xp: rounded, reason, day },
     });
 }
+
+/**
+ * Updates only a day's total agent time and most threads at once, leaving
+ * clock time and XP as they were (for locked days whose sub-agent threads
+ * were filled in later).
+ */
+export async function refreshAgentTotals(userId: string, day: string, timezone: string): Promise<void> {
+  const { start, end } = dayBounds(day, timezone);
+  const where = and(eq(minuteAgent.userId, userId), gte(minuteAgent.t, start), lt(minuteAgent.t, end));
+  const [total] = await db.select({ work: sql<number>`COALESCE(SUM(COALESCE(${minuteAgent.workSec}, ${minuteAgent.agentSec})), 0)` })
+    .from(minuteAgent).where(where);
+  const perMinute = await db.select({ n: sql<number>`SUM(COALESCE(${minuteAgent.threads}, ${minuteAgent.sessions}))` })
+    .from(minuteAgent).where(where).groupBy(minuteAgent.t);
+  await db.update(dailyRollup).set({
+    agentWorkSec: sql`GREATEST(${dailyRollup.agentSec}, ${Number(total?.work ?? 0)})`,
+    peakThreads: perMinute.reduce((s, r) => Math.max(s, Number(r.n)), 0),
+  }).where(and(eq(dailyRollup.userId, userId), eq(dailyRollup.day, day)));
+}

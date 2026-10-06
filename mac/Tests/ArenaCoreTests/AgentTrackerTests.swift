@@ -207,6 +207,30 @@ struct DatabaseSourceTests {
         #expect(try box.store.chatSummary(agent: "claude", session: "abc/agent-1") == nil)
     }
 
+    @Test func threadBackfillMatchesAFreshRead() throws {
+        // Before threads: parent and sub-agent events stored merged, all on the main thread.
+        let old = try Sandbox()
+        let source = ClaudeSource()
+        try old.tracker().ingest(agent: "claude", session: "abc",
+                                 events: (parentLines + subagentLines).flatMap { source.events(fromLine: line($0)) },
+                                 requireTokens: true)
+        _ = try old.write(".claude/projects/p/abc.jsonl", parentLines.map { $0 + "\n" }.joined())
+        _ = try old.write(".claude/projects/p/abc/subagents/agent-1.jsonl", subagentLines.map { $0 + "\n" }.joined())
+        try old.tracker().tagClaudeThreads()
+
+        let fresh = try Sandbox()
+        try fresh.tracker().processFile(try fresh.write(".claude/projects/p/abc.jsonl", parentLines.map { $0 + "\n" }.joined()), source: source)
+        try fresh.tracker().processFile(try fresh.write(".claude/projects/p/abc/subagents/agent-1.jsonl",
+                                                        subagentLines.map { $0 + "\n" }.joined()), source: source)
+
+        let minutes = stride(from: minuteOf(at("2026-10-05T10:00:00Z")), through: minuteOf(at("2026-10-05T10:03:00Z")), by: 60)
+        let entries = { (box: Sandbox) in try minutes.flatMap { try box.store.agentEntries(t: $0) } }
+        #expect(try entries(old) == entries(fresh))
+        #expect(try entries(old).contains { ($0.workSec ?? 0) > $0.sec })
+        // Runs once.
+        #expect(try old.store.value(AgentTracker.threadsKey) == "1")
+    }
+
     /// Stores data the way version 1 did: the sub-agent under its own `<parent>/<stem>` session.
     func versionOneStore() throws -> Sandbox {
         let box = try Sandbox()

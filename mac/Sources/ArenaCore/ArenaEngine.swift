@@ -81,6 +81,7 @@ public final class ArenaEngine: @unchecked Sendable {
     public func scanEverything() {
         queue.async { [self] in
             log { try tracker.mergeClaudeSubagents() }
+            log { try tracker.tagClaudeThreads() }
             for source in jsonlAgentSources {
                 for file in tracker.sessionFiles(for: source) {
                     queue.async { [self] in log { try tracker.processFile(file, source: source) } }
