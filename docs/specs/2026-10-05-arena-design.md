@@ -63,7 +63,9 @@ arena/
 - **Meetings:** each tick also lists processes capturing audio input (CoreAudio
   process objects, `kAudioProcessPropertyIsRunningInput`; no microphone permission
   needed). If a call app holds the mic (Zoom, Slack, Teams, FaceTime, Discord, Webex,
-  Around, Tuple, Granola, or a browser), the tick's seconds go to that app as meeting
+  Around, Tuple, Granola, or a browser that is also playing audio, per
+  `kAudioProcessPropertyIsRunningOutput`: a call plays the other people, a recorder
+  doesn't), the tick's seconds go to that app as meeting
   time, at most 60 s a minute. Meeting time is reported separately and never makes a
   minute human-active (only dictation does).
 - **A call wins the minute:** each minute counts once. Human time excludes call

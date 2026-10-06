@@ -237,11 +237,19 @@ struct MicAppsTests {
     }
 
     @Test func callAppsWinOverNotesAndBrowsers() {
-        let reading = MicApps.classify(["com.google.Chrome.helper", "com.granola.app", "us.zoom.xos", "com.apple.VoiceMemos"])
+        let reading = MicApps.classify(["com.google.Chrome.helper", "com.granola.app", "us.zoom.xos", "com.apple.VoiceMemos"],
+                                       outputtingBundleIds: ["com.google.Chrome.helper"])
         #expect(reading.meeting?.name == "Zoom")
         #expect(!reading.dictating)
         #expect(MicApps.classify(["com.google.Chrome.helper", "com.granola.app"]).meeting?.name == "Granola")
-        #expect(MicApps.classify(["com.google.Chrome.helper"]).meeting?.use == .browserCall)
+        #expect(MicApps.classify(["com.google.Chrome.helper"], outputtingBundleIds: ["com.google.Chrome.helper.Renderer"]).meeting?.use == .browserCall)
+    }
+
+    @Test func aBrowserThatOnlyListensIsRecordingNotACall() {
+        // Recording in a browser (mic, no playback) isn't a meeting; Zoom doesn't need playback.
+        #expect(MicApps.classify(["com.google.Chrome.helper"]).meeting == nil)
+        #expect(MicApps.classify(["com.google.Chrome.helper"], outputtingBundleIds: ["us.zoom.xos"]).meeting == nil)
+        #expect(MicApps.classify(["us.zoom.xos"]).meeting?.name == "Zoom")
     }
 
     @Test func dictationIsNotAMeeting() {

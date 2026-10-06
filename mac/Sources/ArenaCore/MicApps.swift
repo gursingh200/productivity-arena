@@ -4,7 +4,8 @@ import Foundation
 public enum MicUse: Int, Sendable, Comparable {
     /// Dictation counts as human input (the person is "typing" by voice).
     case dictation
-    /// A browser using the mic is treated as a call (Meet and friends).
+    /// A browser using the mic is a call (Meet and friends) only while it's
+    /// also playing audio: a call plays the other people, a recorder doesn't.
     case browserCall
     /// A notes app that listens along to a meeting.
     case meetingNotes
@@ -90,10 +91,13 @@ public enum MicApps {
     }
 
     /// Classifies the bundle ids of every process currently capturing input.
-    /// Unknown apps (voice memos, audio tools…) are ignored.
-    public static func classify(_ capturingBundleIds: [String]) -> Reading {
+    /// Unknown apps (voice memos, audio tools…) are ignored. A browser counts
+    /// as a call only if one of its processes is also playing audio
+    /// (`outputtingBundleIds`), so recording in a browser isn't a meeting.
+    public static func classify(_ capturingBundleIds: [String], outputtingBundleIds: [String] = []) -> Reading {
         let apps = capturingBundleIds.compactMap(app(forBundleId:))
-        let meeting = apps.filter { $0.use != .dictation }
+        let playing = Set(outputtingBundleIds.compactMap(app(forBundleId:)).map(\.bundleId))
+        let meeting = apps.filter { $0.use != .dictation && ($0.use != .browserCall || playing.contains($0.bundleId)) }
             .max { $0.use != $1.use ? $0.use < $1.use : $0.bundleId > $1.bundleId }
         return Reading(dictating: apps.contains { $0.use == .dictation }, meeting: meeting)
     }

@@ -9,8 +9,17 @@ import Foundation
 public enum MicSensor {
 
     public static func capturingBundleIds() -> [String] {
+        bundleIds(where: isRunningInput)
+    }
+
+    /// Processes playing audio right now (whether or not it's audible).
+    public static func outputtingBundleIds() -> [String] {
+        bundleIds(where: isRunningOutput)
+    }
+
+    private static func bundleIds(where running: (AudioObjectID) -> Bool) -> [String] {
         var ids: [String] = []
-        for process in processObjects() where isRunningInput(process) {
+        for process in processObjects() where running(process) {
             if let bundleId = bundleId(of: process), !bundleId.isEmpty { ids.append(bundleId) }
         }
         return ids
@@ -31,8 +40,16 @@ public enum MicSensor {
         return Array(objects.prefix(Int(size) / MemoryLayout<AudioObjectID>.size))
     }
 
+    private static func isRunningOutput(_ process: AudioObjectID) -> Bool {
+        flag(process, kAudioProcessPropertyIsRunningOutput)
+    }
+
     private static func isRunningInput(_ process: AudioObjectID) -> Bool {
-        var addr = address(kAudioProcessPropertyIsRunningInput)
+        flag(process, kAudioProcessPropertyIsRunningInput)
+    }
+
+    private static func flag(_ process: AudioObjectID, _ selector: AudioObjectPropertySelector) -> Bool {
+        var addr = address(selector)
         var running: UInt32 = 0
         var size = UInt32(MemoryLayout<UInt32>.size)
         guard AudioObjectGetPropertyData(process, &addr, 0, nil, &size, &running) == noErr else { return false }

@@ -155,7 +155,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let titlesOn = engine.currentSettings().windowTitlesEnabled
         engine.tick(now: Date(), idleSeconds: IdleSensor.secondsSinceLastInput(), app: frontApp.current,
                     windowTitle: titlesOn ? WindowTitleSensor.focusedWindowTitle() : nil,
-                    locked: power.isSuspended, micCapturing: MicSensor.capturingBundleIds())
+                    locked: power.isSuspended, micCapturing: MicSensor.capturingBundleIds(),
+                    audioPlaying: MicSensor.outputtingBundleIds())
     }
 
     private func uploadSoon() {
