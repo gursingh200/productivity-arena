@@ -32,13 +32,11 @@ export default async function LeaderboardPage({ searchParams }: { searchParams: 
   const score = (value: number) =>
     tab.id === "weekly_xp" ? `${compact(value)} XP` : tab.id === "level" ? `Level ${value}`
       : tab.id === "parallelism" ? `${value.toFixed(1)}×` : hours(value);
-  // On the agent-total boards, a second bar shows total agent hours (sub-agents counted separately).
+  // On the agent-total boards the agents bar grows by the sub-agent time on top (total − clock agent hours).
   const showTotal = tab.id === "agent_total" || tab.id === "parallelism";
+  const extra = (r: (typeof shown)[number]) => (showTotal ? Math.max(0, (r.weeklyAgentWorkSec ?? 0) - (r.weeklyAgentSec ?? 0)) : 0);
   // All bars share one scale so people can be compared by length.
-  const maxTotal = Math.max(1, ...shown.map((r) => Math.max(
-    (r.weeklyHumanSec ?? 0) + (r.weeklyAgentSec ?? 0),
-    showTotal ? (r.weeklyAgentWorkSec ?? 0) : 0,
-  )));
+  const maxTotal = Math.max(1, ...shown.map((r) => (r.weeklyHumanSec ?? 0) + (r.weeklyAgentSec ?? 0) + extra(r)));
 
   return (
     <div style={{ maxWidth: 1040, margin: "0 auto" }}>
@@ -63,7 +61,7 @@ export default async function LeaderboardPage({ searchParams }: { searchParams: 
           <Link key={t.id} className="tab" href={href({ tab: t.id })} aria-current={t.id === tab.id ? "true" : undefined}>{t.label}</Link>
         ))}
       </nav>
-      {tab.id === "agent_total" ? <p className="help" style={{ margin: "-6px 0 14px" }}>Every agent thread counted on its own: sub-agents running side by side each add their time.</p> : null}
+      {tab.id === "agent_total" ? <p className="help" style={{ margin: "-6px 0 14px" }}>Every agent thread counted on its own: sub-agents running side by side each add their time. The lighter blue is the sub-agent time on top of agent hours.</p> : null}
       {tab.id === "parallelism" ? <p className="help" style={{ margin: "-6px 0 14px" }}>Total agent hours divided by agent hours. 1.0× means one thing at a time; higher means more running side by side. Needs 5 agent hours this week.</p> : null}
 
       <div className="board">
@@ -96,16 +94,12 @@ export default async function LeaderboardPage({ searchParams }: { searchParams: 
               <span className="split-bar" aria-hidden>
                 {r.weeklyHumanSec ? <span style={{ width: `${(r.weeklyHumanSec / maxTotal) * 100}%`, background: "var(--human)", color: "var(--human)" }} /> : null}
                 {r.weeklyAgentSec ? <span style={{ width: `${(r.weeklyAgentSec / maxTotal) * 100}%`, background: "var(--agent)", color: "var(--agent)" }} /> : null}
+                {extra(r) > 0 ? <span className="split-extra" style={{ width: `${(extra(r) / maxTotal) * 100}%` }} title="Sub-agent time on top of agent hours" /> : null}
               </span>
-              {showTotal && r.weeklyAgentWorkSec ? (
-                <span className="split-bar" aria-hidden>
-                  <span className="split-total" style={{ width: `${(r.weeklyAgentWorkSec / maxTotal) * 100}%` }} />
-                </span>
-              ) : null}
               <span className="split-nums num">
                 <span>Human {r.weeklyHumanSec === null ? "not shared" : hours(r.weeklyHumanSec)}</span>
                 <span>Agents {r.weeklyAgentSec === null ? "not shared" : hours(r.weeklyAgentSec)}</span>
-                {showTotal && r.weeklyAgentWorkSec !== null ? <span>Total agents {hours(r.weeklyAgentWorkSec)}</span> : null}
+                {showTotal && r.weeklyAgentWorkSec !== null ? <span>Total agents {hours(r.weeklyAgentWorkSec)}{extra(r) > 0 ? ` (+${hours(extra(r))} sub-agents)` : ""}</span> : null}
               </span>
             </span>
             <span className="board-score num">{score(r.value)}</span>

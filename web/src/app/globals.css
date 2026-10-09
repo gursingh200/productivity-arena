@@ -443,8 +443,8 @@ td.vs-lead { color: var(--text); }
 .split { display: flex; flex-direction: column; gap: 5px; }
 .split-bar { height: 6px; border-radius: 3px; display: flex; gap: 2px; }
 .split-bar span { height: 100%; border-radius: 3px; min-width: 2px; }
-/* Total agent hours: the agents colour, striped so it reads as "more of the same". */
-.split-total { background: repeating-linear-gradient(135deg, var(--agent) 0 4px, color-mix(in srgb, var(--agent) 55%, transparent) 4px 7px); }
+/* Sub-agent time on top of agent hours: a lighter agents colour, so it reads as "more of the same". */
+.split-extra { background: color-mix(in srgb, var(--agent) 45%, var(--raised)); color: color-mix(in srgb, var(--agent) 45%, var(--raised)); }
 .split-nums { display: flex; gap: 14px; font-size: 13px; color: var(--muted); }
 .board-score { text-align: right; font-size: 18px; font-weight: 500; }
 

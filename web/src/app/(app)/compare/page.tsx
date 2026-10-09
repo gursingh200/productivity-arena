@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { asc, isNotNull } from "drizzle-orm";
 import { Avatar } from "@/components/Avatar";
+import { PersonSelect } from "@/components/PersonSelect";
 import { CompareHours, CompareRadar, CompareTrend, type Side } from "@/components/CompareCharts";
 import { agentName, compact, duration, hours, LEAGUE_NAMES } from "@/components/format";
 import { db } from "@/db";
@@ -24,13 +25,9 @@ function Picker({ people, note }: { people: Array<{ handle: string; name: string
       <h1 className="page-title">Compare</h1>
       <p className="page-sub">Put yourself side by side with a teammate. You see a stat only when you both share it.</p>
       {note ? <p className="notice">{note}</p> : null}
-      <form action="/compare" className="panel" style={{ display: "flex", gap: 10 }}>
-        <select name="with" className="input" aria-label="Teammate" required defaultValue="">
-          <option value="" disabled>Choose a teammate</option>
-          {people.map((p) => <option key={p.handle} value={p.handle}>{p.name}</option>)}
-        </select>
-        <button className="btn" type="submit">Compare</button>
-      </form>
+      <div className="panel">
+        <PersonSelect people={people} value="" param="with" path="/compare" placeholder="Choose a teammate" label="Teammate" />
+      </div>
     </div>
   );
 }
@@ -103,12 +100,9 @@ export default async function ComparePage({ searchParams }: { searchParams: Prom
             </div>
           </Link>
         ))}
-        <form action="/compare" className="day-pick">
-          <select name="with" className="input" aria-label="Compare with someone else" defaultValue={handle}>
-            {people.map((p) => <option key={p.handle} value={p.handle}>{p.name}</option>)}
-          </select>
-          <button className="btn btn-sm btn-quiet" type="submit">Switch</button>
-        </form>
+        <div className="day-pick">
+          <PersonSelect people={people} value={handle} param="with" path="/compare" placeholder="Someone else…" label="Compare with someone else" />
+        </div>
       </div>
 
       <div className="grid12" style={{ marginTop: 24 }}>

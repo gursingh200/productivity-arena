@@ -4,6 +4,7 @@ import { users } from "@/db/schema";
 import {
   ACHIEVEMENTS, evaluateAchievements, globalRates, measureAchievements, unlocksOf, type Achievement, type Progress,
 } from "@/lib/achievements";
+import { PersonSelect } from "@/components/PersonSelect";
 import { CATEGORY_LABEL, visibility } from "@/lib/sharing";
 import { requireViewer } from "@/lib/viewer";
 
@@ -77,13 +78,10 @@ export default async function AchievementsPage({ searchParams }: { searchParams:
             You’ve unlocked <b>{mine.size}</b> of {ACHIEVEMENTS.length}. Rarest first; the percentage is how many of the {active} active people have each one.
           </p>
         </div>
-        <form action="/achievements" className="day-pick">
-          <select name="vs" className="input" defaultValue={rival?.handle ?? ""} aria-label="Compare with">
-            <option value="">Compare with…</option>
-            {people.filter((p) => p.id !== viewer.id).map((p) => <option key={p.id} value={p.handle!}>{p.name ?? p.handle}</option>)}
-          </select>
-          <button className="btn btn-sm" type="submit">Compare</button>
-        </form>
+        <div className="day-pick">
+          <PersonSelect people={people.filter((p) => p.id !== viewer.id).map((p) => ({ handle: p.handle!, name: p.name ?? p.handle! }))}
+            value={rival?.handle ?? ""} param="vs" path="/achievements" placeholder="Compare with…" label="Compare with" />
+        </div>
       </div>
 
       <section className={`panel ach-list${rival ? " vs" : ""}`} style={{ marginTop: 24 }}>
