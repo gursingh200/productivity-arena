@@ -27,11 +27,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         self.engine = engine
         self.frontApp = frontApp
         super.init()
-        if let button = statusItem.button {
-            button.image = NSImage(systemSymbolName: "flame", accessibilityDescription: "Arena")
-            button.image?.isTemplate = true
-            button.imagePosition = .imageLeading
-        }
+        statusItem.button?.imagePosition = .imageLeading
         let menu = NSMenu()
         menu.delegate = self
         statusItem.menu = menu
@@ -43,12 +39,43 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         refreshTitle()
     }
 
-    /// "4h 12m · 9h 40m" — human time, then agent time, today.
+    /// "4h 12m · 9h 40m" — human time, then agent time, today. The flame turns
+    /// into a star with a dot while a quest offer waits for an answer.
     func refreshTitle() {
         let summary = engine.todaySummary()
+        let questOffered = !QuestStatus.forMenu(status?.quests ?? []).offered.isEmpty
+        statusItem.button?.image = questOffered ? Self.questOfferedIcon : Self.flameIcon
         statusItem.button?.title = " \(Format.duration(summary.humanSeconds)) · \(Format.duration(Int(summary.agentSeconds)))"
-        statusItem.button?.toolTip = "Arena — human time · agent time today"
+        statusItem.button?.toolTip = questOffered
+            ? "Arena — a new quest is waiting for you"
+            : "Arena — human time · agent time today"
     }
+
+    private static let flameIcon: NSImage? = {
+        let image = NSImage(systemSymbolName: "flame", accessibilityDescription: "Arena")
+        image?.isTemplate = true
+        return image
+    }()
+
+    /// An orange star with a red dot at its top right. Not a template image, so
+    /// it keeps its colours on light and dark menu bars.
+    private static let questOfferedIcon: NSImage? = {
+        let config = NSImage.SymbolConfiguration(pointSize: 13, weight: .semibold)
+            .applying(NSImage.SymbolConfiguration(paletteColors: [.systemOrange]))
+        guard let star = NSImage(systemSymbolName: "star.fill", accessibilityDescription: "Arena: new quest offered")?
+            .withSymbolConfiguration(config) else { return nil }
+        let size = NSSize(width: star.size.width + 4, height: max(star.size.height, 16))
+        let image = NSImage(size: size, flipped: false) { rect in
+            star.draw(in: NSRect(x: 0, y: (rect.height - star.size.height) / 2, width: star.size.width, height: star.size.height))
+            let dot: CGFloat = 6
+            NSColor.systemRed.setFill()
+            NSBezierPath(ovalIn: NSRect(x: rect.width - dot, y: rect.height - dot, width: dot, height: dot)).fill()
+            return true
+        }
+        image.isTemplate = false
+        image.accessibilityDescription = "Arena: new quest offered"
+        return image
+    }()
 
     func showMessage(_ text: String) {
         NSApp.activate(ignoringOtherApps: true)
@@ -67,6 +94,9 @@ final class MenuBarController: NSObject, NSMenuDelegate {
 
         // Header: version and update state.
         menu.addItem(label("Arena \(ArenaEngine.version)" + (onCheckForUpdates != nil ? "  ·  \(updateStatus ?? "Not checked yet")" : "")))
+        if let onCheckForUpdates {
+            menu.addItem(action("Check for Updates", key: "u") { onCheckForUpdates() })
+        }
         menu.addItem(.separator())
         menu.addItem(label("Human \(Format.duration(summary.humanSeconds))  ·  Agents \(Format.duration(Int(summary.agentSeconds)))  ·  Meetings \(Format.duration(summary.meetingSeconds))"))
         if summary.agentsWorkingNow > 0 {
@@ -249,9 +279,6 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         sub.addItem(label(settings.serverURL.map { "Server: \($0.host ?? $0.absoluteString)" } ?? "Not connected"))
         sub.addItem(action("Connect to Arena…") { [weak self] in self?.onConnectInBrowser?() })
         sub.addItem(action("Paste Pairing Link…") { [weak self] in self?.askForPairingLink() })
-        if let onCheckForUpdates {
-            sub.addItem(action("Check for Updates") { onCheckForUpdates() })
-        }
         sub.addItem(.separator())
         switch engine.linearState {
         case .off:

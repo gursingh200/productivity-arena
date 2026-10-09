@@ -15,6 +15,16 @@ export interface Release {
 export const CHANGELOG: Release[] = [
   {
     date: "2026-10-09",
+    title: "Easier to find Compare, quests in the menu bar",
+    mac: "0.1.18",
+    changes: [
+      "Compare is in the top bar. Comparing with someone on the Achievements page now counts toward Rivalry, and links to the full comparison.",
+      "When a quest is offered, the Arena icon in your Mac’s menu bar turns into an orange star with a red dot until you accept or decline it.",
+      "Check for Updates is at the top of the Arena menu, under the version, instead of inside Connection.",
+    ],
+  },
+  {
+    date: "2026-10-09",
     title: "Compare, achievements, appearance and guilds",
     mac: "0.1.17",
     changes: [
