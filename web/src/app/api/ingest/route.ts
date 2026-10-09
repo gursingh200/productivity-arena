@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { chats, devices, minuteAgent, minuteApp, minuteMeeting, users } from "@/db/schema";
@@ -6,7 +6,7 @@ import { authenticateDevice } from "@/lib/device-auth";
 import { IngestPayloadSchema, MAX_CHATS, MAX_MINUTES } from "@/lib/ingest-schema";
 import { adoptEarlierPairings } from "@/lib/device-merge";
 import { ingestCutoff, lockedMinutes, pruneMinutes } from "@/lib/retention";
-import { evaluateAchievements } from "@/lib/achievements";
+import { evaluateAchievementsIfDue } from "@/lib/achievements";
 import { recomputeForDays, refreshAgentTotals } from "@/lib/rollup";
 import { startInstant } from "@/lib/start-date";
 import { changeTimezone } from "@/lib/user-timezone";
@@ -163,7 +163,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     for (const day of totalDays) await refreshAgentTotals(auth.userId, day, timezone);
   }
 
-  await evaluateAchievements(auth.userId, now);
+  // After the response, so the Mac isn't kept waiting; throttled per person.
+  after(() => evaluateAchievementsIfDue(auth.userId, now));
   await pruneMinutes(auth.userId);
   return NextResponse.json({ accepted: payload.minutes.length, status: await buildStatusPayload(auth.userId) });
 }

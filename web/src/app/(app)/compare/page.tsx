@@ -5,7 +5,7 @@ import { CompareHours, CompareRadar, CompareTrend, type Side } from "@/component
 import { agentName, compact, duration, hours, LEAGUE_NAMES } from "@/components/format";
 import { db } from "@/db";
 import { users } from "@/db/schema";
-import { ACHIEVEMENTS, evaluateAchievements, recordEvent, unlocksOf } from "@/lib/achievements";
+import { ACHIEVEMENTS, evaluateAchievementsIfDue, recordEvent, unlocksOf } from "@/lib/achievements";
 import { headToHead, hourProfile, records } from "@/lib/compare";
 import { loadProfile, type DayTotals, type ProfileData } from "@/lib/profile";
 import { visibility } from "@/lib/sharing";
@@ -62,7 +62,7 @@ export default async function ComparePage({ searchParams }: { searchParams: Prom
   const target = await db.query.users.findFirst({ where: (u, { eq }) => eq(u.handle, handle) });
   if (!target) return <Picker people={people} note="No one with that handle." />;
   await recordEvent(viewer.id, "compare", target.id);
-  await Promise.all([evaluateAchievements(viewer.id), evaluateAchievements(target.id)]); // up to date as of now
+  await evaluateAchievementsIfDue(viewer.id); // theirs stay current from their own uploads
 
   const [pa, pb] = (await Promise.all([loadProfile(viewer.handle!, viewer), loadProfile(handle, viewer)])) as [ProfileData, ProfileData];
   const see = visibility(viewer, target);

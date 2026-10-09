@@ -1,7 +1,7 @@
 import { asc, isNotNull } from "drizzle-orm";
 import { db } from "@/db";
 import { users } from "@/db/schema";
-import { ACHIEVEMENTS, evaluateAchievements, globalRates, unlocksOf, type Achievement } from "@/lib/achievements";
+import { ACHIEVEMENT_BY_ID, ACHIEVEMENTS, evaluateAchievements, globalRates, unlocksOf, type Achievement } from "@/lib/achievements";
 import { CATEGORY_LABEL, visibility } from "@/lib/sharing";
 import { requireViewer } from "@/lib/viewer";
 
@@ -56,7 +56,7 @@ export default async function AchievementsPage({ searchParams }: { searchParams:
 
       {rival ? (
         <p className="help" style={{ margin: "18px 0 0" }}>
-          You and {rival.name ?? rival.handle}: you have {mine.size}, they have {[...theirs!.keys()].filter((id) => see![ACHIEVEMENTS.find((a) => a.id === id)!.category]).length} you can see.
+          You and {rival.name ?? rival.handle}: you have {mine.size}, they have {[...theirs!.keys()].filter((id) => { const a = ACHIEVEMENT_BY_ID.get(id); return a !== undefined && see![a.category]; }).length} you can see.
         </p>
       ) : null}
 

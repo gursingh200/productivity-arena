@@ -11,7 +11,11 @@ purgeBeforeStart()
     if (moved) console.log(`${moved} account(s) moved from UTC to the company timezone.`);
     // Achievements for what already happened (new achievements on older data).
     let unlocked = 0;
-    for (const u of await db.select({ id: users.id }).from(users)) unlocked += (await evaluateAchievements(u.id)).length;
+    const everyone = await db.select({ id: users.id }).from(users);
+    for (let i = 0; i < everyone.length; i += 5) {
+      const batch = await Promise.all(everyone.slice(i, i + 5).map((u) => evaluateAchievements(u.id)));
+      unlocked += batch.reduce((s, b) => s + b.length, 0);
+    }
     if (unlocked) console.log(`${unlocked} achievement(s) unlocked from past data.`);
     process.exit(0);
   })

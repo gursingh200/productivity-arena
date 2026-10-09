@@ -2,8 +2,14 @@
  * API route tests against the real Postgres (docker compose, port 5433).
  * Skipped when DATABASE_URL isn't set.
  */
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
+
+// Outside a real request, run work deferred with `after()` straight away.
+vi.mock("next/server", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next/server")>()),
+  after: (task: () => unknown) => { void task(); },
+}));
 import { and, eq } from "drizzle-orm";
 
 const DB_URL = process.env.DATABASE_URL;

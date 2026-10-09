@@ -34,6 +34,19 @@ describe.skipIf(!DB_URL)("achievements", async () => {
     expect(await evaluateAchievements(userId, new Date("2026-09-10T12:00:00Z"))).toEqual([]);
   });
 
+  it("uploads re-check achievements at most every 15 minutes", async () => {
+    const { evaluateAchievementsIfDue } = await import("@/lib/achievements");
+    const t = new Date("2026-09-11T12:00:00Z");
+    await db.update(schema.users).set({ achievementsCheckedAt: null }).where(eq(schema.users.id, userId));
+    await evaluateAchievementsIfDue(userId, t);
+    const checked = async () => (await db.query.users.findFirst({ where: eq(schema.users.id, userId) }))!.achievementsCheckedAt!.getTime();
+    expect(await checked()).toBe(t.getTime());
+    await evaluateAchievementsIfDue(userId, new Date(t.getTime() + 5 * 60_000)); // too soon: skipped
+    expect(await checked()).toBe(t.getTime());
+    await evaluateAchievementsIfDue(userId, new Date(t.getTime() + 16 * 60_000));
+    expect(await checked()).toBe(t.getTime() + 16 * 60_000);
+  });
+
   it("Rivalry needs five different teammates compared", async () => {
     for (const t of ["a", "b", "c", "d"]) expect(await recordEvent(userId, "compare", t)).toEqual([]);
     expect(await recordEvent(userId, "compare", "d")).toEqual([]); // the same teammate again doesn't count

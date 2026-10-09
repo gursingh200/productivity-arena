@@ -40,8 +40,8 @@ Entry points: a **Compare** button on every profile, and a person picker on
 Steam-style: every achievement with its **global rate** (share of active people
 who have it), sorted rarest first, your unlocks highlighted with dates, and a
 per-person view on profiles and in Compare. Unlocks are saved once
-(`user_achievements(user_id, achievement_id, unlocked_at)`), checked after each
-upload and once on deploy for past data. Each achievement belongs to a sharing
+(`user_achievements(user_id, achievement_id, unlocked_at)`), checked after uploads
+(after the response, at most every 15 minutes per person) and once on deploy for past data. Each achievement belongs to a sharing
 category; you see someone's achievement only if you both share that category.
 Global rates count everyone (they reveal no one's stats).
 
@@ -50,7 +50,7 @@ Global rates count everyone (they reveal no one's stats).
 | First steps | first active minute | human |
 | Deep diver | a 90-minute focus block | human |
 | Full day | 8 h human time in one day | human |
-| Early bird | active before 7:00 on 5 days | human |
+| Early bird | active between 4:00 and 7:00 on 5 days | human |
 | Night owl | active after midnight on 5 days | human |
 | On a roll | 5-day streak (2 h+ a day) | human |
 | Unstoppable | 20-day streak | human |

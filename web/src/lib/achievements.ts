@@ -6,7 +6,7 @@
  * Most are checked from data (`evaluateAchievements`, after each upload);
  * a few count things done on the site (`recordEvent`).
  */
-import { and, eq, gte, inArray, sql } from "drizzle-orm";
+import { and, eq, gte, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   achievementEvents, awayDays, bugReports, dailyRollup, leagueWeeks, linearIssues, minuteAgent, minuteApp, quests,
@@ -30,7 +30,7 @@ export const ACHIEVEMENTS: Achievement[] = [
   { id: "deep_diver", name: "Deep diver", description: "A 90-minute focus block.", category: "human" },
   { id: "zen", name: "Zen", description: "A 3-hour focus block.", category: "human" },
   { id: "full_day", name: "Full day", description: "8 hours of your own time in one day.", category: "human" },
-  { id: "early_bird", name: "Early bird", description: "Active before 7:00 on 5 days.", category: "human" },
+  { id: "early_bird", name: "Early bird", description: "Active between 4:00 and 7:00 on 5 days.", category: "human" },
   { id: "night_owl", name: "Night owl", description: "Active after midnight on 5 days.", category: "human" },
   { id: "on_a_roll", name: "On a roll", description: "2+ hours on 5 weekdays in a row.", category: "human" },
   { id: "unstoppable", name: "Unstoppable", description: "2+ hours on 20 weekdays in a row.", category: "human" },
@@ -129,7 +129,8 @@ export async function evaluateAchievements(userId: string, now: Date = new Date(
   check("polyglot", days.some((d) => Object.values(d.agentSecByAgent as Record<string, number>).filter((s) => s > 0).length >= 3));
   check("fifty_fifty", days.some((d) => d.humanSec >= 7200 && d.agentSec >= 7200
     && Math.abs(d.humanSec - d.agentSec) <= 0.05 * Math.max(d.humanSec, d.agentSec)));
-  check("makers_day", days.some((d) => isWeekday(d.day) && d.humanSec >= 4 * 3600 && d.meetingSec === 0));
+  // Finished days only: a meeting later today would make it untrue.
+  check("makers_day", days.some((d) => d.day < today && isWeekday(d.day) && d.humanSec >= 4 * 3600 && d.meetingSec === 0));
   check("ghost", days.some((d) => d.day < today && d.agentSec >= 4 * 3600 && d.humanSec === 0 && d.meetingSec === 0));
   // Only finished days: today passes through 8h 00m on its way up.
   check("right_on_time", days.some((d) => d.day < today && d.humanSec === 8 * 3600));
@@ -223,6 +224,20 @@ export async function evaluateAchievements(userId: string, now: Date = new Date(
   check("gone_fishing", [...awayWeeks.values()].some((n) => n >= 5));
 
   return unlock(userId, earned, now);
+}
+
+/** How often uploads re-check someone's achievements. */
+export const CHECK_INTERVAL_MS = 15 * 60_000;
+
+/**
+ * `evaluateAchievements`, at most once per CHECK_INTERVAL_MS per person (it runs
+ * a dozen queries, and Macs upload every five minutes).
+ */
+export async function evaluateAchievementsIfDue(userId: string, now: Date = new Date()): Promise<string[]> {
+  const claimed = await db.update(users).set({ achievementsCheckedAt: now })
+    .where(and(eq(users.id, userId), or(isNull(users.achievementsCheckedAt), lt(users.achievementsCheckedAt, new Date(now.getTime() - CHECK_INTERVAL_MS)))))
+    .returning({ id: users.id });
+  return claimed.length ? evaluateAchievements(userId, now) : [];
 }
 
 /** Opening Arena between 3 and 4 am (the person's timezone). */

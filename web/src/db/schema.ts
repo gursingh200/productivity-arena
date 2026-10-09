@@ -59,6 +59,8 @@ export const users = pgTable("users", {
   role: roleEnum("role").notNull().default("member"),
   guildId: uuid("guild_id").references(() => guilds.id, { onDelete: "set null" }),
   timezone: text("timezone").notNull().default("UTC"),
+  /** When achievements were last checked from this person's data (throttles the check). */
+  achievementsCheckedAt: timestamp("achievements_checked_at", { withTimezone: true }),
   /** Colour choices (lib/colours.ts); null = the defaults. */
   palette: text("palette"),
   accent: text("accent"),
