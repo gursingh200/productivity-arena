@@ -90,7 +90,7 @@ Gotchas:
 - Minutes kept 16 days on the server; daily rollups, XP, quests, history,
   achievements forever. Minutes > 24 h old are write-once (except total agent
   time / thread counts), with one exception: each device row gets one resend
-  window (`devices.resend_until`, 1 h from its first `resend: true` upload) in
+  window (`devices.resend_until`, 24 h from its first `resend: true` upload) in
   which its own minutes up to 7 days old can be replaced. The Mac resends its
   last 7 days on every pairing (a re-pair is a new device row) and once after
   updating to 0.1.19 (`resend.weekDone` in the local store).

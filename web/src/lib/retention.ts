@@ -18,8 +18,11 @@ export const LOCK_AFTER_HOURS = 24;
 export const MINUTE_RETENTION_DAYS = 16;
 /** A resend may replace this device's own minutes up to this old. */
 export const RESEND_DAYS = 7;
-/** How long a device's one resend window stays open once its first resend upload arrives. */
-export const RESEND_WINDOW_MINUTES = 60;
+/**
+ * How long a device's one resend window stays open once its first resend upload
+ * arrives: a day, so a slow connection or a Mac that sleeps mid-resend still finishes.
+ */
+export const RESEND_WINDOW_MINUTES = 24 * 60;
 
 const DAY_MS = 86_400_000;
 
