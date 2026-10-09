@@ -15,15 +15,16 @@ export interface Release {
 export const CHANGELOG: Release[] = [
   {
     date: "2026-10-09",
-    title: "Compare, achievements and colours",
+    title: "Compare, achievements, appearance and guilds",
     mac: "0.1.17",
     changes: [
-      "Compare yourself with a teammate: both skills radars on one chart, head-to-head numbers, the weeks each of you won, trends, when you each work, top apps and personal bests.",
-      "Achievements: 41 to unlock, ten of them secret, with how rare each one is across the team. Put yours next to a teammate’s.",
-      "The skills radar can rank you against the team or your guild, or use fixed targets. Parallelism replaces Velocity, which only counted Linear issues.",
-      "Settings → Colours: pick a palette and an accent. Every palette stays readable for colour-blind eyes, and only you see it.",
+      "Compare yourself with a teammate: both skills radars scaled head to head with the real numbers, the weeks each of you won, trends, when you each work, top apps, personal bests and achievements.",
+      "Achievements: 41 to unlock, ten of them secret, with how rare each one is and your progress towards it. Put yours next to a teammate’s, Steam-style. Past achievements were unlocked from your history, dated the day you reached them.",
+      "The skills radar shows fixed targets, or ranks you against the team or your guild. Parallelism replaces Velocity, which only counted Linear issues.",
+      "Settings has tabs, and Appearance lets you pick a background, palette, accent and bar style, with a live preview. The accent colours the logo and the tab icon; your Mac’s dashboard uses the same colours.",
+      "Guild admins can see their guild’s page and add people who aren’t in a guild yet. Admins choose guild admins on the Team page.",
       "Count Calendar Meetings (Arena menu → Privacy): calendar meetings with other people count while your Mac is awake and unlocked, so in-person meetings count too. Event names stay on your Mac.",
-      "The account menu opens when you hover your picture. Agent leaderboards show total agent hours as a second bar.",
+      "The account menu opens on hover, What’s new lists every change, and the leaderboard shows sub-agent time on top of agent hours.",
     ],
   },
   {
