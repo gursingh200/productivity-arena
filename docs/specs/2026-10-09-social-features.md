@@ -10,7 +10,8 @@ both share its category.
   everyone outside engineering. Parallelism = total agent hours ÷ agent hours
   (sub-agents running side by side), 10 = 3×. Linear still earns XP.
 - **Three scales**, chosen with a toggle wherever the radar appears:
-  - **Team** (default): each axis is your percentile among people active in
+  - **Absolute** (default): today's fixed targets.
+  - **Team**: each axis is your percentile among people active in
     the last 30 days (top = 10, bottom = 0). Shows where you're strong compared
     with everyone.
   - **Guild**: the same, among your guild.
@@ -41,7 +42,8 @@ Steam-style: every achievement with its **global rate** (share of active people
 who have it), sorted rarest first, your unlocks highlighted with dates, and a
 per-person view on profiles and in Compare. Unlocks are saved once
 (`user_achievements(user_id, achievement_id, unlocked_at)`), checked after uploads
-(after the response, at most every 15 minutes per person) and once on deploy for past data. Each achievement belongs to a sharing
+(after the response, at most every 15 minutes per person) and once on deploy for past data;
+backfilled unlocks are dated the day they were first reached, when the data shows it. Each achievement belongs to a sharing
 category; you see someone's achievement only if you both share that category.
 Global rates count everyone (they reveal no one's stats).
 
@@ -109,8 +111,8 @@ entries for this release are written as part of it. Linked from the account menu
 
 ## 8. Appearance (Settings → Appearance)
 
-Background (5), palette (4), accent (6) and bar style (solid, striped, dotted,
-soft, outline), with a live preview that follows the pointer. Every palette is
+Background (5), palette (4), accent (6), bar style (solid, striped, dotted,
+soft, outline) and sub-agent time (lighter, striped, outline, accent), with a live preview that follows the pointer. Every palette is
 validated on every background. The accent colours the logo and the tab icon
 (`/api/icon?accent=`). The Mac's dashboard takes the same colours from the
 status it syncs.

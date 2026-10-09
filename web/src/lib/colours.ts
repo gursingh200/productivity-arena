@@ -55,12 +55,21 @@ export const BAR_STYLES = [
 ] as const;
 export type BarStyle = (typeof BAR_STYLES)[number]["id"];
 
-export interface Appearance { background: string; palette: string; accent: string; barStyle: BarStyle }
+/** How sub-agent time (on top of agent hours) is drawn next to the agents colour. */
+export const SUBAGENT_STYLES = [
+  { id: "lighter", name: "Lighter blue" },
+  { id: "striped", name: "Striped" },
+  { id: "outline", name: "Outline" },
+  { id: "accent", name: "Accent" },
+] as const;
+export type SubagentStyle = (typeof SUBAGENT_STYLES)[number]["id"];
 
-export const DEFAULT_APPEARANCE: Appearance = { background: "graphite", palette: "ember", accent: "ember", barStyle: "solid" };
+export interface Appearance { background: string; palette: string; accent: string; barStyle: BarStyle; subagent: SubagentStyle }
+
+export const DEFAULT_APPEARANCE: Appearance = { background: "graphite", palette: "ember", accent: "ember", barStyle: "solid", subagent: "lighter" };
 
 /** Someone's appearance from their user row (unknown or missing ids fall back to the defaults). */
-export function appearanceOf(user: { background?: string | null; palette?: string | null; accent?: string | null; barStyle?: string | null }): Appearance {
+export function appearanceOf(user: { background?: string | null; palette?: string | null; accent?: string | null; barStyle?: string | null; subagentStyle?: string | null }): Appearance {
   const pick = <T extends { id: string }>(list: readonly T[], id: string | null | undefined, fallback: string) =>
     list.some((x) => x.id === id) ? id! : fallback;
   return {
@@ -68,6 +77,7 @@ export function appearanceOf(user: { background?: string | null; palette?: strin
     palette: pick(PALETTES, user.palette, DEFAULT_APPEARANCE.palette),
     accent: pick(ACCENTS, user.accent, DEFAULT_APPEARANCE.accent),
     barStyle: pick(BAR_STYLES, user.barStyle, DEFAULT_APPEARANCE.barStyle) as BarStyle,
+    subagent: pick(SUBAGENT_STYLES, user.subagentStyle, DEFAULT_APPEARANCE.subagent) as SubagentStyle,
   };
 }
 
@@ -86,6 +96,14 @@ export function appearanceVars(a: Appearance): Record<string, string> {
     "--heat-3": `color-mix(in srgb, ${p.human} 70%, ${bg.raised})`,
     "--heat-4": p.human,
     "--heat-5": `color-mix(in srgb, ${p.human} 75%, #ffffff)`,
+    // Sub-agent time: a background and an edge, so outline can be just an edge.
+    "--subagent-bg": {
+      lighter: `color-mix(in srgb, ${p.agent} 45%, ${bg.raised})`,
+      striped: `repeating-linear-gradient(135deg, ${p.agent} 0 3px, color-mix(in srgb, ${p.agent} 35%, ${bg.raised}) 3px 6px)`,
+      outline: `color-mix(in srgb, ${p.agent} 12%, transparent)`,
+      accent: accent,
+    }[a.subagent],
+    "--subagent-ring": a.subagent === "outline" ? `inset 0 0 0 1.5px ${p.agent}` : "none",
     "--logo-1": `color-mix(in srgb, ${accent} 70%, #ffffff)`,
     "--logo-2": `color-mix(in srgb, ${accent} 80%, #000000)`,
   };

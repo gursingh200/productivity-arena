@@ -1,0 +1,1 @@
+ALTER TABLE "users" ADD COLUMN "subagent_style" text;

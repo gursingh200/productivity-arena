@@ -134,6 +134,13 @@
       "when": 1791539853854,
       "tag": "0018_roles",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1791540844862,
+      "tag": "0019_subagent_style",
+      "breakpoints": true
     }
   ]
 }

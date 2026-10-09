@@ -14,7 +14,7 @@ import {
 } from "@/db/schema";
 import { computeLevel } from "@/lib/levels";
 import type { Category } from "@/lib/sharing";
-import { addDays, localHour, toUserDay } from "@/lib/timezone";
+import { addDays, dayBounds, localHour, toUserDay } from "@/lib/timezone";
 
 export interface Achievement {
   id: string;
@@ -106,6 +106,8 @@ export interface Progress {
   target: number;
   /** How to show the numbers: hours, minutes, a count, a ratio (×), or just done/not done. */
   unit: "h" | "min" | "count" | "x" | "done";
+  /** The local day it was first reached, when the data shows it (for unlock dates when backfilling). */
+  on?: string;
 }
 
 /** Progress towards every data-based achievement (the event-based ones are counted in `recordEvent`). */
@@ -124,6 +126,15 @@ export async function measureAchievements(userId: string, now: Date = new Date()
   const max = (f: (d: (typeof days)[number]) => number) => days.reduce((m, d) => Math.max(m, f(d)), 0);
   const isWeekday = (day: string) => ![0, 6].includes(new Date(`${day}T12:00:00Z`).getUTCDay());
   const byDay = new Map(days.map((d) => [d.day, d]));
+  const sortedDays = [...days].sort((a, b) => (a.day < b.day ? -1 : 1));
+  /** The first day a day-level condition held. */
+  const firstDay = (ok: (d: (typeof days)[number]) => boolean) => sortedDays.find(ok)?.day;
+  /** The day a running total first reached `target`. */
+  const crossDay = (f: (d: (typeof days)[number]) => number, target: number) => {
+    let run = 0;
+    return sortedDays.find((d) => (run += f(d)) >= target)?.day;
+  };
+  const dayOf = (id: string, day: string | undefined) => { const p = out.get(id); if (p && day) p.on = day; };
 
   flag("first_steps", sum((d) => d.humanSec) > 0);
   flag("first_agent", sum((d) => d.agentSec) > 0);
@@ -230,14 +241,62 @@ export async function measureAchievements(userId: string, now: Date = new Date()
   const [compares] = await db.select({ n: sql<number>`COUNT(*)` }).from(achievementEvents)
     .where(and(eq(achievementEvents.userId, userId), eq(achievementEvents.kind, "compare")));
   put("rivalry", Number(compares?.n ?? 0), 5, "count");
+
+  // When each was first reached, where the data says (backfilled unlocks get these dates).
+  dayOf("first_steps", firstDay((d) => d.humanSec > 0));
+  dayOf("first_agent", firstDay((d) => d.agentSec > 0));
+  dayOf("deep_diver", firstDay((d) => d.longestFocusSec >= 90 * 60));
+  dayOf("zen", firstDay((d) => d.longestFocusSec >= 180 * 60));
+  dayOf("full_day", firstDay((d) => d.humanSec >= 8 * H));
+  dayOf("centurion", crossDay((d) => d.humanSec, 100 * H));
+  dayOf("hundred_hours", crossDay((d) => d.agentSec, 100 * H));
+  dayOf("thousand_threads", crossDay((d) => Math.max(d.agentWorkSec, d.agentSec), 1000 * H));
+  dayOf("squad", firstDay((d) => Math.max(d.peakThreads, d.peakParallel) >= 5));
+  dayOf("swarm", firstDay((d) => Math.max(d.peakThreads, d.peakParallel) >= 10));
+  dayOf("polyglot", firstDay((d) => Object.values(d.agentSecByAgent as Record<string, number>).filter((x) => x > 0).length >= 3));
+  dayOf("fifty_fifty", firstDay((d) => d.humanSec >= 7200 && d.agentSec >= 7200 && Math.abs(d.humanSec - d.agentSec) <= 0.05 * Math.max(d.humanSec, d.agentSec)));
+  dayOf("makers_day", firstDay((d) => d.day < today && isWeekday(d.day) && d.humanSec >= 4 * H && d.meetingSec === 0));
+  dayOf("ghost", firstDay((d) => d.day < today && d.agentSec >= 4 * H && d.humanSec === 0 && d.meetingSec === 0));
+  dayOf("right_on_time", firstDay((d) => d.day < today && d.humanSec === 8 * H));
+  const saturday = firstDay((d) => new Date(`${d.day}T12:00:00Z`).getUTCDay() === 6 && d.humanSec > 0 && (byDay.get(addDays(d.day, 1))?.humanSec ?? 0) > 0);
+  dayOf("weekend_warrior", saturday ? addDays(saturday, 1) : undefined);
+  if (sorted.length) {
+    let run = 0;
+    for (let d = sorted[0]!; d <= sorted[sorted.length - 1]!; d = addDays(d, 1)) {
+      if (!isWeekday(d)) continue;
+      run = (byDay.get(d)?.humanSec ?? 0) >= 7200 ? run + 1 : 0;
+      if (run === 5) dayOf("on_a_roll", out.get("on_a_roll")?.on ?? d);
+      if (run === 20) dayOf("unstoppable", out.get("unstoppable")?.on ?? d);
+    }
+  }
+  const xpDays = await db.select({ day: xpLedger.day, xp: sql<number>`SUM(${xpLedger.xp})` }).from(xpLedger)
+    .where(eq(xpLedger.userId, userId)).groupBy(xpLedger.day).orderBy(xpLedger.day);
+  for (const [id, n] of [["level_5", 5], ["level_10", 10], ["level_25", 25]] as const) {
+    let run = 0;
+    dayOf(id, xpDays.find((r) => computeLevel((run += Number(r.xp))).level >= n)?.day);
+  }
+  const resolved = done.filter((q) => q.resolvedAt).sort((a, b) => a.resolvedAt!.getTime() - b.resolvedAt!.getTime());
+  const nth = (list: typeof resolved, n: number) => (list[n - 1] ? toUserDay(list[n - 1]!.resolvedAt!, tz) : undefined);
+  dayOf("quester", nth(resolved, 10));
+  dayOf("live_wire", nth(resolved.filter((q) => q.kind === "live"), 5));
   return out;
 }
 
 /** Checks every data-based achievement for one person and saves the new unlocks. */
 export async function evaluateAchievements(userId: string, now: Date = new Date()): Promise<string[]> {
   const progress = await measureAchievements(userId, now);
-  const earned = [...progress].filter(([, p]) => p.value >= p.target).map(([id]) => id);
-  return unlock(userId, earned, now);
+  const user = await db.query.users.findFirst({ where: eq(users.id, userId), columns: { timezone: true } });
+  const tz = user?.timezone ?? "UTC";
+  const earned = [...progress].filter(([, p]) => p.value >= p.target);
+  // Backfilled unlocks carry the day they were reached (its evening), never later than now.
+  const when = (p: Progress) => {
+    if (!p.on) return now;
+    const evening = new Date(dayBounds(p.on, tz).end.getTime() - 60_000);
+    return evening < now ? evening : now;
+  };
+  const fresh: string[] = [];
+  for (const [id, p] of earned) fresh.push(...(await unlock(userId, [id], when(p))));
+  return fresh;
 }
 
 /** How often uploads re-check someone's achievements. */

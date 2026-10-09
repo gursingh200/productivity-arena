@@ -5,7 +5,7 @@ import { useState } from "react";
 import { BarStyleProvider, useBarPaint } from "@/components/BarStyle";
 import { BrandMark } from "@/components/BrandMark";
 import {
-  ACCENTS, appearanceVars, BACKGROUNDS, BAR_STYLES, DEFAULT_APPEARANCE, PALETTES,
+  ACCENTS, appearanceVars, BACKGROUNDS, BAR_STYLES, DEFAULT_APPEARANCE, PALETTES, SUBAGENT_STYLES,
   type Appearance, type BarStyle,
 } from "@/lib/colours";
 
@@ -68,6 +68,10 @@ export default function AppearanceForm({ initial }: { initial: Appearance }) {
         </Group>
         <Group title="Bars" note="How bars look in charts and on the leaderboard.">
           {BAR_STYLES.map((s) => option("barStyle", s.id, s.name, <BarGlyph style={s.id} />))}
+        </Group>
+        <Group title="Sub-agent time" note="Sub-agents’ time on top of agent hours, on the leaderboard.">
+          {SUBAGENT_STYLES.map((s) => option("subagent", s.id, s.name,
+            <span className="sub-glyph" style={appearanceVars({ ...preview, subagent: s.id }) as React.CSSProperties}><i /><b /></span>))}
         </Group>
         <div className="look-actions">
           <button className="btn" onClick={save} disabled={saving || !dirty}>{saving ? "Saving…" : "Save appearance"}</button>
@@ -133,7 +137,11 @@ function Preview({ appearance }: { appearance: Appearance }) {
           <div className="look-board">
             <span className="num" style={{ color: "var(--xp)" }}>1</span>
             <span>Priya</span>
-            <span className="split-bar"><span style={{ width: "42%", background: "var(--human)", color: "var(--human)" }} /><span style={{ width: "38%", background: "var(--agent)", color: "var(--agent)" }} /></span>
+            <span className="split-bar">
+              <span style={{ width: "34%", background: "var(--human)", color: "var(--human)" }} />
+              <span style={{ width: "30%", background: "var(--agent)", color: "var(--agent)" }} />
+              <span className="split-extra" style={{ width: "22%" }} />
+            </span>
             <b className="num" style={{ color: "var(--xp)" }}>2,340 XP</b>
           </div>
           <div className="look-quest">

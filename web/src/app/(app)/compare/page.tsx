@@ -19,14 +19,14 @@ const THEM = "#a8922c";
 const sum30 = (days: DayTotals[], key: "humanSec" | "agentSec" | "meetingSec") =>
   days.some((d) => d[key] === null) ? null : days.reduce((s, d) => s + (d[key] ?? 0), 0);
 
-function Picker({ people, note }: { people: Array<{ handle: string; name: string }>; note?: string }) {
+function Picker({ people, note, yourself }: { people: Array<{ handle: string; name: string }>; note?: string; yourself: Array<{ handle: string; name: string }> }) {
   return (
     <div style={{ margin: "0 auto", maxWidth: 560 }}>
       <h1 className="page-title">Compare</h1>
       <p className="page-sub">Put yourself side by side with a teammate. You see a stat only when you both share it.</p>
       {note ? <p className="notice">{note}</p> : null}
       <div className="panel">
-        <PersonSelect people={people} value="" param="with" path="/compare" placeholder="Choose a teammate" label="Teammate" />
+        <PersonSelect people={[...people, ...yourself]} value="" param="with" path="/compare" placeholder="Choose a teammate" label="Teammate" />
       </div>
     </div>
   );
@@ -50,14 +50,16 @@ export default async function ComparePage({ searchParams }: { searchParams: Prom
   const handle = (await searchParams).with?.split(",")[0]?.trim();
   const people = (await db.query.users.findMany({ where: isNotNull(users.handle), orderBy: [asc(users.name)] }))
     .filter((p) => p.id !== viewer.id).map((p) => ({ handle: p.handle!, name: p.name ?? p.handle! }));
+  // Last in the list: comparing yourself with yourself is a secret achievement.
+  const yourself = viewer.handle ? [{ handle: viewer.handle, name: "Yourself" }] : [];
 
-  if (!handle) return <Picker people={people} />;
+  if (!handle) return <Picker people={people} yourself={yourself} />;
   if (handle === viewer.handle) {
     await recordEvent(viewer.id, "mirror"); // a secret achievement
-    return <Picker people={people} note="That’s you. Pick someone else." />;
+    return <Picker people={people} yourself={yourself} note="That’s you. Nice try. Pick someone else." />;
   }
   const target = await db.query.users.findFirst({ where: (u, { eq }) => eq(u.handle, handle) });
-  if (!target) return <Picker people={people} note="No one with that handle." />;
+  if (!target) return <Picker people={people} yourself={yourself} note="No one with that handle." />;
   await recordEvent(viewer.id, "compare", target.id);
   await evaluateAchievementsIfDue(viewer.id); // theirs stay current from their own uploads
 
@@ -101,7 +103,7 @@ export default async function ComparePage({ searchParams }: { searchParams: Prom
           </Link>
         ))}
         <div className="day-pick">
-          <PersonSelect people={people} value={handle} param="with" path="/compare" placeholder="Someone else…" label="Compare with someone else" />
+          <PersonSelect people={[...people, ...yourself]} value={handle} param="with" path="/compare" placeholder="Someone else…" label="Compare with someone else" />
         </div>
       </div>
 

@@ -16,7 +16,7 @@ const LABELS: Record<Scale, string> = { team: "Team", guild: "Guild", absolute: 
 export function ScaleSwitch({ scale, onChange, guild }: { scale: Scale; onChange: (s: Scale) => void; guild: boolean }) {
   return (
     <div className="seg" role="group" aria-label="Scale">
-      {(["team", ...(guild ? ["guild"] : []), "absolute"] as Scale[]).map((s) => (
+      {(["absolute", "team", ...(guild ? ["guild"] : [])] as Scale[]).map((s) => (
         <button key={s} aria-pressed={scale === s} onClick={() => onChange(s)}>{LABELS[s]}</button>
       ))}
     </div>
@@ -25,7 +25,7 @@ export function ScaleSwitch({ scale, onChange, guild }: { scale: Scale; onChange
 
 /** One person's radar and scores, with the Team / Guild / Absolute switch. */
 export function SkillsPanel({ skills }: { skills: ScaledScores }) {
-  const [scale, setScale] = useState<Scale>("team");
+  const [scale, setScale] = useState<Scale>("absolute");
   const scores = scale === "guild" && skills.guild ? skills.guild : scale === "absolute" ? skills.absolute : skills.team;
   return (
     <>

@@ -364,14 +364,14 @@ td.vs-lead { color: var(--text); }
 .settings-page { margin: 0 auto; max-width: 760px; }
 .settings-page .tabs { margin-bottom: 20px; }
 /* Bar styles (Settings → Appearance) for HTML bars; each bar sets its own colour as `color`. */
-[data-bars="striped"] :is(.split-bar span, .meter span, .spark i[style*="background"]) {
+[data-bars="striped"] :is(.split-bar span:not(.split-extra), .meter span, .spark i[style*="background"]) {
   background-image: repeating-linear-gradient(135deg, rgba(0, 0, 0, 0.38) 0 2px, transparent 2px 6px) !important;
 }
-[data-bars="dotted"] :is(.split-bar span, .meter span, .spark i[style*="background"]) {
+[data-bars="dotted"] :is(.split-bar span:not(.split-extra), .meter span, .spark i[style*="background"]) {
   background-image: radial-gradient(rgba(0, 0, 0, 0.45) 1px, transparent 1.4px) !important; background-size: 4px 4px !important;
 }
-[data-bars="soft"] :is(.split-bar span, .meter span, .spark i[style*="background"]) { opacity: 0.55; box-shadow: inset 0 0 0 1px currentColor; }
-[data-bars="outline"] :is(.split-bar span, .meter span, .spark i[style*="background"]) {
+[data-bars="soft"] :is(.split-bar span:not(.split-extra), .meter span, .spark i[style*="background"]) { opacity: 0.55; box-shadow: inset 0 0 0 1px currentColor; }
+[data-bars="outline"] :is(.split-bar span:not(.split-extra), .meter span, .spark i[style*="background"]) {
   background: color-mix(in srgb, currentColor 12%, transparent) !important; box-shadow: inset 0 0 0 1.5px currentColor;
 }
 /* Settings → Appearance: options on the left, a live preview on the right. */
@@ -384,6 +384,9 @@ td.vs-lead { color: var(--text); }
 .look-option[aria-checked="true"] { border-color: var(--xp); color: var(--text); }
 .look-swatch.bg { width: 22px; height: 22px; border-radius: 6px; display: grid; place-items: end; padding: 3px; border: 1px solid var(--line); }
 .look-swatch.bg i { width: 12px; height: 9px; border-radius: 2px; border: 1px solid; }
+.sub-glyph { display: inline-flex; gap: 2px; width: 30px; height: 8px; }
+.sub-glyph i { flex: 1.2; border-radius: 2px; background: var(--agent); }
+.sub-glyph b { flex: 1; border-radius: 2px; background: var(--subagent-bg); box-shadow: var(--subagent-ring); }
 .look-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 .look-preview { position: sticky; top: 90px; background: var(--bg); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 14px; display: flex; flex-direction: column; gap: 10px; color: var(--text); transition: background 0.15s; }
 .look-top { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px; }
@@ -443,8 +446,8 @@ td.vs-lead { color: var(--text); }
 .split { display: flex; flex-direction: column; gap: 5px; }
 .split-bar { height: 6px; border-radius: 3px; display: flex; gap: 2px; }
 .split-bar span { height: 100%; border-radius: 3px; min-width: 2px; }
-/* Sub-agent time on top of agent hours: a lighter agents colour, so it reads as "more of the same". */
-.split-extra { background: color-mix(in srgb, var(--agent) 45%, var(--raised)); color: color-mix(in srgb, var(--agent) 45%, var(--raised)); }
+/* Sub-agent time on top of agent hours (Settings → Appearance; lighter agents colour by default). */
+.split-extra { background: var(--subagent-bg, color-mix(in srgb, var(--agent) 45%, var(--raised))); box-shadow: var(--subagent-ring, none); }
 .split-nums { display: flex; gap: 14px; font-size: 13px; color: var(--muted); }
 .board-score { text-align: right; font-size: 18px; font-weight: 500; }
 

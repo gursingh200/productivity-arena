@@ -32,6 +32,11 @@ describe.skipIf(!DB_URL)("achievements", async () => {
     expect(first).toEqual(expect.arrayContaining(["first_steps", "first_agent", "deep_diver", "full_day", "right_on_time", "ghost", "polyglot"]));
     expect(first).not.toContain("zen");
     expect(await evaluateAchievements(userId, new Date("2026-09-10T12:00:00Z"))).toEqual([]);
+    // Backfilled unlocks are dated the day they were reached, not the day they were checked.
+    const rows = await db.select().from(schema.userAchievements).where(eq(schema.userAchievements.userId, userId));
+    const on = (id: string) => rows.find((r) => r.achievementId === id)!.unlockedAt.toISOString().slice(0, 10);
+    expect(on("deep_diver")).toBe("2026-09-01");
+    expect(on("ghost")).toBe("2026-09-02");
   });
 
   it("uploads re-check achievements at most every 15 minutes", async () => {
