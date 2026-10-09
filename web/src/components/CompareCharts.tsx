@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { DayTotals } from "@/lib/profile";
+import { useBarPaint } from "./BarStyle";
 import { duration, shortDay } from "./format";
 import { Radar, SCALE_NOTE, SKILLS, type Scale } from "./Radar";
 import { ScaleSwitch, type ScaledScores } from "./SkillsPanel";
@@ -134,6 +135,7 @@ export function CompareHours({ a, b, hoursA, hoursB }: { a: Side; b: Side; hours
   const max = Math.max(10, ...hoursA, ...hoursB);
   const y = (min: number) => TOP + plotH - (min / max) * plotH;
   const peak = (h: number[]) => h.indexOf(Math.max(...h));
+  const { defs, paint } = useBarPaint([{ key: "a", color: a.color }, { key: "b", color: b.color }]);
   return (
     <>
       <div className="legend" style={{ marginBottom: 16 }}>
@@ -141,6 +143,7 @@ export function CompareHours({ a, b, hoursA, hoursB }: { a: Side; b: Side; hours
         <span><i className="dot" style={{ background: b.color }} />{b.name}, busiest {peak(hoursB)}:00</span>
       </div>
       <svg className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Active minutes by hour of day, ${a.name} and ${b.name}`}>
+        {defs}
         {[0, Math.round(max / 2), Math.round(max)].map((t) => (
           <g key={t}>
             <line x1={LEFT} x2={W} y1={y(t)} y2={y(t)} stroke="var(--line-soft)" />
@@ -151,8 +154,8 @@ export function CompareHours({ a, b, hoursA, hoursB }: { a: Side; b: Side; hours
           const gx = LEFT + h * slot + (slot - (barW * 2 + 2)) / 2;
           return (
             <g key={h}>
-              {[{ v: hoursA[h]!, c: a.color, i: 0 }, { v: hoursB[h]!, c: b.color, i: 1 }].map(({ v, c, i }) => v > 0
-                ? <rect key={i} x={gx + i * (barW + 2)} y={y(v)} width={barW} height={TOP + plotH - y(v)} rx="2" fill={c}><title>{`${h}:00, ${Math.round(v)} min a day`}</title></rect>
+              {[{ v: hoursA[h]!, c: a.color, i: 0, k: "a" }, { v: hoursB[h]!, c: b.color, i: 1, k: "b" }].map(({ v, c, i, k }) => v > 0
+                ? <rect key={i} x={gx + i * (barW + 2)} y={y(v)} width={barW} height={TOP + plotH - y(v)} rx="2" {...paint(k, c)}><title>{`${h}:00, ${Math.round(v)} min a day`}</title></rect>
                 : null)}
               {h % 3 === 0 ? <text x={LEFT + h * slot + slot / 2} y={H - 6} textAnchor="middle">{h}:00</text> : null}
             </g>

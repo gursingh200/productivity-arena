@@ -41,6 +41,13 @@ final class DashboardWindowController: NSObject, NSWindowDelegate {
         if let range { model.range = range } else { model.load() }
     }
 
+    /// New colours from the website: rebuild the open window's view so it picks them up.
+    func refreshColours() {
+        guard let window, let model else { return }
+        window.backgroundColor = NSColor(Palette.bg)
+        window.contentViewController = NSHostingController(rootView: DashboardView(model: model))
+    }
+
     func windowWillClose(_ notification: Notification) {
         model?.stop()
         window?.contentViewController = nil

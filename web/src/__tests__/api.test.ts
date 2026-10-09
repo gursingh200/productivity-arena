@@ -299,7 +299,7 @@ describe.skipIf(!DB_URL)("device API", async () => {
     expect(Object.keys(body).sort()).toEqual(["accepted", "status"]);
 
     const s = await (await status(new NextRequest("http://localhost/api/agent/status", { headers: { authorization: `Bearer ${TOKEN}` } }))).json();
-    expect(Object.keys(s).sort()).toEqual(["dashboardUrl", "quests", "today", "user"]);
+    expect(Object.keys(s).sort()).toEqual(["appearance", "dashboardUrl", "quests", "today", "user"]);
     expect(Object.keys(s.user).sort()).toEqual(["handle", "league", "level", "name", "weeklyOf", "weeklyRank", "xp", "xpForNext"]);
     expect(Object.keys(s.today).sort()).toEqual(["agentSec", "humanSec", "meetingSec", "xp"]);
     for (const q of s.quests) {

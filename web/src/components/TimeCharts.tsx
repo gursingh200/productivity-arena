@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { HourTotals } from "@/lib/day-view";
 import type { DayTotals } from "@/lib/profile";
+import { useBarPaint } from "./BarStyle";
 import { duration, shortDay } from "./format";
 
 const SERIES = [
@@ -45,6 +46,7 @@ function Tip({ x, W, title, rows }: { x: number; W: number; title: string; rows:
 /** Grouped bars per hour of one day, in minutes (0–60 a series). */
 export function HourChart({ hours }: { hours: HourTotals[] }) {
   const [active, setActive] = useState<number | null>(null);
+  const { defs, paint } = useBarPaint(SERIES.map((s) => ({ key: s.key, color: s.color })));
   const W = 760;
   const H = 240;
   const plotH = H - TOP - BOTTOM;
@@ -60,6 +62,7 @@ export function HourChart({ hours }: { hours: HourTotals[] }) {
     <>
       <Legend keys={["humanSec", "agentSec", "meetingSec"]} />
       <svg className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Human, agent and meeting minutes per hour">
+        {defs}
         {ticks.map((t) => (
           <g key={t}>
             <line x1={LEFT} x2={W} y1={yy(t * 60)} y2={yy(t * 60)} stroke="var(--line-soft)" />
@@ -78,7 +81,7 @@ export function HourChart({ hours }: { hours: HourTotals[] }) {
                 const sec = h[s.key];
                 if (sec <= 0) return null;
                 const top = yy(sec);
-                return <rect key={s.key} x={gx + j * (barW + 2)} y={top} width={barW} height={Math.max(2, TOP + plotH - top)} rx={Math.min(2, barW / 2)} fill={s.color} />;
+                return <rect key={s.key} x={gx + j * (barW + 2)} y={top} width={barW} height={Math.max(2, TOP + plotH - top)} rx={Math.min(2, barW / 2)} {...paint(s.key, s.color)} />;
               })}
               {i % 3 === 0 ? <text x={x0 + slot / 2} y={H - 6} textAnchor="middle">{h.hour}:00</text> : null}
             </g>

@@ -73,7 +73,7 @@ export default async function LeaderboardPage({ searchParams }: { searchParams: 
         {board.locked ? (
           <div className="locked">
             <p>This board ranks {CATEGORY_LABEL[board.category].toLowerCase()}. Share yours to see it, and to be on it.</p>
-            <Link className="btn btn-sm" href="/settings#sharing">Sharing settings</Link>
+            <Link className="btn btn-sm" href="/settings/sharing">Sharing settings</Link>
           </div>
         ) : shown.length === 0 ? (
           <p className="empty" style={{ padding: "20px 18px" }}>Nobody here yet. Only people who share {CATEGORY_LABEL[board.category].toLowerCase()} appear.</p>
@@ -94,8 +94,8 @@ export default async function LeaderboardPage({ searchParams }: { searchParams: 
             </span>
             <span className="split hide-sm">
               <span className="split-bar" aria-hidden>
-                {r.weeklyHumanSec ? <span style={{ width: `${(r.weeklyHumanSec / maxTotal) * 100}%`, background: "var(--human)" }} /> : null}
-                {r.weeklyAgentSec ? <span style={{ width: `${(r.weeklyAgentSec / maxTotal) * 100}%`, background: "var(--agent)" }} /> : null}
+                {r.weeklyHumanSec ? <span style={{ width: `${(r.weeklyHumanSec / maxTotal) * 100}%`, background: "var(--human)", color: "var(--human)" }} /> : null}
+                {r.weeklyAgentSec ? <span style={{ width: `${(r.weeklyAgentSec / maxTotal) * 100}%`, background: "var(--agent)", color: "var(--agent)" }} /> : null}
               </span>
               {showTotal && r.weeklyAgentWorkSec ? (
                 <span className="split-bar" aria-hidden>

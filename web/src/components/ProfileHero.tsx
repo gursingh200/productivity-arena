@@ -37,7 +37,7 @@ export function ProfileHero({ data }: { data: ProfileData }) {
             <div>
               <div className="badge-label"><Link href="/xp#leagues">{LEAGUE_NAMES[xp.league]} league</Link></div>
               <div className="badge-value num">
-                {xp.rank ? `#${xp.rank.rank} of ${xp.rank.of} this week` : data.isOwner ? <Link href="/settings#sharing">Share XP to be ranked</Link> : "Not ranked"}
+                {xp.rank ? `#${xp.rank.rank} of ${xp.rank.of} this week` : data.isOwner ? <Link href="/settings/sharing">Share XP to be ranked</Link> : "Not ranked"}
               </div>
             </div>
           </div>

@@ -60,7 +60,7 @@ function Figure({ total, days, elapsed, peak, tone, pct }: { total: number; days
       <div className="figure-foot">
         <div className="spark" aria-hidden>
           {days.map((sec, i) => (
-            <i key={i} style={{ height: `${Math.max(3, (sec / peak) * 28)}px`, background: i < elapsed && sec > 0 ? `var(--${tone})` : undefined }} />
+            <i key={i} style={{ height: `${Math.max(3, (sec / peak) * 28)}px`, background: i < elapsed && sec > 0 ? `var(--${tone})` : undefined, color: `var(--${tone})` }} />
           ))}
         </div>
         <span className="change" title="Compared with the same days last week">

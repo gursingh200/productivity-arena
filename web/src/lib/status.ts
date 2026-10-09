@@ -1,6 +1,7 @@
 /**
  * StatusPayload for the Mac app (spec §3.2).
  */
+import { ACCENTS, appearanceOf, BACKGROUNDS, PALETTES } from "@/lib/colours";
 import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { dailyRollup, users, xpLedger, type Quest } from "@/db/schema";
@@ -37,6 +38,8 @@ export interface StatusPayload {
   today: { humanSec: number; agentSec: number; meetingSec: number; xp: number };
   quests: StatusQuest[];
   dashboardUrl: string;
+  /** Their colours (Settings → Appearance), so the Mac's dashboard matches the website. */
+  appearance: { bg: string; panel: string; raised: string; line: string; human: string; agent: string; meeting: string; accent: string };
 }
 
 export async function buildStatusPayload(userId: string, now: Date = new Date()): Promise<StatusPayload> {
@@ -74,6 +77,7 @@ export async function buildStatusPayload(userId: string, now: Date = new Date())
     today: { humanSec: rollup?.humanSec ?? 0, agentSec: rollup?.agentSec ?? 0, meetingSec: rollup?.meetingSec ?? 0, xp: Number(todayXp?.xp ?? 0) },
     quests: (await questsForUser(userId, user.guildId)).map(toStatusQuest),
     dashboardUrl: `${baseUrl}/u/${handle}`,
+    appearance: statusAppearance(user),
   };
 }
 
@@ -90,5 +94,15 @@ export function toStatusQuest(q: Quest): StatusQuest {
     unit: q.unit,
     state: q.state,
     expiresAt: expiresAt?.toISOString() ?? null,
+  };
+}
+
+function statusAppearance(user: Parameters<typeof appearanceOf>[0]): StatusPayload["appearance"] {
+  const a = appearanceOf(user);
+  const bg = BACKGROUNDS.find((b) => b.id === a.background)!;
+  const p = PALETTES.find((x) => x.id === a.palette)!;
+  return {
+    bg: bg.bg, panel: bg.panel, raised: bg.raised, line: bg.line,
+    human: p.human, agent: p.agent, meeting: p.meeting, accent: ACCENTS.find((x) => x.id === a.accent)!.colour,
   };
 }

@@ -58,7 +58,7 @@ export default async function HistoryPage({ searchParams }: { searchParams: Prom
       {history.locked ? (
         <div className="locked">
           <p>These boards rank {CATEGORY_LABEL[history.category].toLowerCase()}. Share yours to see them, and to be on them.</p>
-          <Link className="btn btn-sm" href="/settings#sharing">Sharing settings</Link>
+          <Link className="btn btn-sm" href="/settings/sharing">Sharing settings</Link>
         </div>
       ) : history.periods.length === 0 ? (
         <p className="empty">No finished {period}s yet. Results appear here once one ends.</p>

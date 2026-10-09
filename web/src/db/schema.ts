@@ -64,6 +64,8 @@ export const users = pgTable("users", {
   /** Colour choices (lib/colours.ts); null = the defaults. */
   palette: text("palette"),
   accent: text("accent"),
+  background: text("background"),
+  barStyle: text("bar_style"),
   /** When a Mac (or the person) last set the timezone; null means it's still the default. */
   timezoneSetAt: timestamp("timezone_set_at", { withTimezone: true }),
   // What this person shares (spec §7, give to get): you see a stat of someone

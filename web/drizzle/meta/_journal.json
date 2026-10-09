@@ -120,6 +120,13 @@
       "when": 1791538158263,
       "tag": "0016_achievements_checked_at",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1791539639840,
+      "tag": "0017_appearance",
+      "breakpoints": true
     }
   ]
 }

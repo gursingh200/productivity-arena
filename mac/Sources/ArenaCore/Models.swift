@@ -261,6 +261,30 @@ public struct StatusPayload: Codable, Equatable {
     public var today: StatusToday?
     public var quests: [QuestStatus]?
     public var dashboardUrl: String?
+    /// The person's colours from the website (Settings → Appearance), as #rrggbb.
+    public var appearance: StatusAppearance?
+}
+
+public struct StatusAppearance: Codable, Equatable, Sendable {
+    public var bg: String
+    public var panel: String
+    public var raised: String
+    public var line: String
+    public var human: String
+    public var agent: String
+    public var meeting: String
+    public var accent: String
+
+    public init(bg: String, panel: String, raised: String, line: String, human: String, agent: String, meeting: String, accent: String) {
+        self.bg = bg
+        self.panel = panel
+        self.raised = raised
+        self.line = line
+        self.human = human
+        self.agent = agent
+        self.meeting = meeting
+        self.accent = accent
+    }
 }
 
 public struct IngestResponse: Codable, Equatable {

@@ -6,18 +6,30 @@ import { BrandMark } from "@/components/BrandMark";
 import { NavLinks } from "@/components/NavLinks";
 import { EasterEggs } from "@/components/EasterEggs";
 import { checkInsomniac } from "@/lib/achievements";
-import { colourCss } from "@/lib/colours";
+import { BarStyleProvider } from "@/components/BarStyle";
+import { appearanceCss, appearanceOf } from "@/lib/colours";
+import { getViewer } from "@/lib/viewer";
+import type { Metadata } from "next";
 import { requireViewer } from "@/lib/viewer";
+
+/** The tab icon follows the accent colour. */
+export async function generateMetadata(): Promise<Metadata> {
+  const viewer = await getViewer();
+  const accent = viewer ? appearanceOf(viewer).accent : "ember";
+  return accent === "ember" ? {} : { icons: { icon: `/api/icon?accent=${accent}` } };
+}
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const viewer = await requireViewer();
   // Everyone picks their sharing on first sign-in before seeing anything else.
   if (!viewer.onboardedAt) redirect("/welcome");
   await checkInsomniac(viewer.id, viewer.timezone);
+  const appearance = appearanceOf(viewer);
+  const css = appearanceCss(appearance);
   return (
     <>
-      {/* Their colour choices (Settings → Colours); nothing for the defaults. */}
-      {colourCss(viewer.palette, viewer.accent) ? <style>{colourCss(viewer.palette, viewer.accent)}</style> : null}
+      {/* Their appearance (Settings → Appearance); nothing for the defaults. */}
+      {css ? <style>{css}</style> : null}
       <header className="topbar">
         <Link href="/" className="brand"><BrandMark /><span>Arena</span></Link>
         <NavLinks />
@@ -41,7 +53,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </div>
         </div>
       </header>
-      <main className="page"><EasterEggs>{children}</EasterEggs></main>
+      <main className="page" data-bars={appearance.barStyle}>
+        <BarStyleProvider value={appearance.barStyle}><EasterEggs>{children}</EasterEggs></BarStyleProvider>
+      </main>
     </>
   );
 }

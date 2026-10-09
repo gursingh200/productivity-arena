@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { DayTotals } from "@/lib/profile";
+import { useBarPaint } from "./BarStyle";
 import { duration, shortDay } from "./format";
 
 const ALL_SERIES = [
@@ -24,6 +25,7 @@ const TOP = 6;
 function Chart({ days, series, className, W, linkDays }: { days: DayTotals[]; series: Series[]; className: string; W: number; linkDays: boolean }) {
   const SERIES = series;
   const [active, setActive] = useState<number | null>(null);
+  const { defs, paint } = useBarPaint(SERIES.map((s) => ({ key: s.key, color: s.color })));
   const max = Math.max(1, ...days.flatMap((d) => SERIES.map((s) => (d[s.key] ?? 0) / 3600)));
   const step = max > 16 ? 8 : max > 8 ? 4 : max > 4 ? 2 : 1;
   const top = Math.ceil(max / step) * step;
@@ -40,6 +42,7 @@ function Chart({ days, series, className, W, linkDays }: { days: DayTotals[]; se
   return (
     <svg className={`chart ${className}`} viewBox={`0 0 ${W} ${H}`} role="img"
       aria-label={`Human, agent and meeting hours per day, last ${days.length} days`}>
+      {defs}
       {ticks.map((t) => (
         <g key={t}>
           <line x1={LEFT} x2={W} y1={y(t * 3600)} y2={y(t * 3600)} stroke="var(--line-soft)" strokeWidth="1" />
@@ -58,7 +61,7 @@ function Chart({ days, series, className, W, linkDays }: { days: DayTotals[]; se
               const sec = d[s.key] ?? 0;
               if (sec <= 0) return null;
               const h = Math.max(2, TOP + plotH - y(sec));
-              return <path key={s.key} d={roundedTop(gx + j * (barW + gap), TOP + plotH - h, barW, h, Math.min(3, barW / 2))} fill={s.color} />;
+              return <path key={s.key} d={roundedTop(gx + j * (barW + gap), TOP + plotH - h, barW, h, Math.min(3, barW / 2))} {...paint(s.key, s.color)} />;
             })}
             {(days.length - 1 - i) % labelEvery === 0 ? <text x={x0 + slot / 2} y={H - 6} textAnchor="middle">{shortDay(d.day)}</text> : null}
           </g>

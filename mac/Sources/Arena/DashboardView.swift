@@ -2,18 +2,39 @@ import ArenaCore
 import Charts
 import SwiftUI
 
-/// Colours shared with the web app: graphite surfaces and three fixed series colours.
+/// Colours shared with the web app: the person's background and series colours
+/// (Settings → Appearance on the website), graphite and ember until it sends them.
 enum Palette {
-    static let bg = Color(hex: 0x0f1012)
-    static let panel = Color(hex: 0x17181b)
-    static let raised = Color(hex: 0x1f2024)
-    static let line = Color(hex: 0x2a2b30)
+    nonisolated(unsafe) static var bg = Color(hex: 0x0f1012)
+    nonisolated(unsafe) static var panel = Color(hex: 0x17181b)
+    nonisolated(unsafe) static var raised = Color(hex: 0x1f2024)
+    nonisolated(unsafe) static var line = Color(hex: 0x2a2b30)
     static let text = Color(hex: 0xf3f1ed)
     static let text2 = Color(hex: 0xb3b0aa)
     static let muted = Color(hex: 0x7d7b77)
-    static let human = Color(hex: 0xe4692c)
-    static let agents = Color(hex: 0x5285e6)
-    static let meetings = Color(hex: 0x35a586)
+    nonisolated(unsafe) static var human = Color(hex: 0xe4692c)
+    nonisolated(unsafe) static var agents = Color(hex: 0x5285e6)
+    nonisolated(unsafe) static var meetings = Color(hex: 0x35a586)
+    nonisolated(unsafe) static var accent = Color(hex: 0xf08a4b)
+
+    static let savedKey = "appearance"
+
+    /// Uses the website's colours, and remembers them for the next launch. Main thread.
+    static func apply(_ a: StatusAppearance) {
+        let hex = { (s: String) in UInt32(s.dropFirst(), radix: 16).map(Color.init(hex:)) }
+        guard let bg = hex(a.bg), let panel = hex(a.panel), let raised = hex(a.raised), let line = hex(a.line),
+              let human = hex(a.human), let agents = hex(a.agent), let meetings = hex(a.meeting), let accent = hex(a.accent) else { return }
+        (Palette.bg, Palette.panel, Palette.raised, Palette.line) = (bg, panel, raised, line)
+        (Palette.human, Palette.agents, Palette.meetings, Palette.accent) = (human, agents, meetings, accent)
+        if let data = try? JSONEncoder().encode(a) { UserDefaults.standard.set(data, forKey: savedKey) }
+    }
+
+    /// The colours remembered from the last sync, if any.
+    static func restore() {
+        guard let data = UserDefaults.standard.data(forKey: savedKey),
+              let a = try? JSONDecoder().decode(StatusAppearance.self, from: data) else { return }
+        apply(a)
+    }
 
     static func color(_ series: ActivitySeries) -> Color {
         switch series {

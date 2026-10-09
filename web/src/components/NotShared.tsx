@@ -13,7 +13,7 @@ export function NotShared({ category, reason, name, compact = false }: {
   if (reason === "yours") {
     return (
       <p className={compact ? "not-shared compact" : "not-shared"}>
-        Share your {label} to see {firstName(name)}’s. <Link href="/settings#sharing">Sharing settings</Link>
+        Share your {label} to see {firstName(name)}’s. <Link href="/settings/sharing">Sharing settings</Link>
       </p>
     );
   }

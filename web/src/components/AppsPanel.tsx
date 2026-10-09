@@ -21,7 +21,7 @@ function AppRows({ apps, tone, show }: { apps: AppTotal[]; tone: "human" | "meet
             <span className="row-name">{label(app)}</span>
           </div>
           <span className="row-value num">{show === "pct" ? percent(app.pct) : duration(app.sec)}</span>
-          <div className="meter" aria-hidden><span style={{ width: `${Math.max(2, (app.pct / top) * 100)}%`, background: `var(--${tone})` }} /></div>
+          <div className="meter" aria-hidden><span style={{ width: `${Math.max(2, (app.pct / top) * 100)}%`, background: `var(--${tone})`, color: `var(--${tone})` }} /></div>
         </div>
       ))}
     </div>

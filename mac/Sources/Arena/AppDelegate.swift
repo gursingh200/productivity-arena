@@ -39,6 +39,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var notifications: QuestNotifications?
     private var dashboard: DashboardWindowController?
     private var updater: Updater?
+    private var lastAppearance: StatusAppearance?
 
     private let frontApp = FrontAppSensor()
     private let power = PowerEvents()
@@ -88,7 +89,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
+        Palette.restore()
         engine.onStatus = { [weak self] status in
+            if let appearance = status.appearance, appearance != self?.lastAppearance {
+                self?.lastAppearance = appearance
+                Palette.apply(appearance)
+                MainActor.assumeIsolated { self?.dashboard?.refreshColours() }
+            }
             self?.menuBar.update(status: status)
             self?.notifications?.offerLiveQuests(status.quests ?? [])
         }
