@@ -59,6 +59,9 @@ export const users = pgTable("users", {
   role: roleEnum("role").notNull().default("member"),
   guildId: uuid("guild_id").references(() => guilds.id, { onDelete: "set null" }),
   timezone: text("timezone").notNull().default("UTC"),
+  /** Colour choices (lib/colours.ts); null = the defaults. */
+  palette: text("palette"),
+  accent: text("accent"),
   /** When a Mac (or the person) last set the timezone; null means it's still the default. */
   timezoneSetAt: timestamp("timezone_set_at", { withTimezone: true }),
   // What this person shares (spec §7, give to get): you see a stat of someone

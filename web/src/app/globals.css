@@ -327,6 +327,14 @@ td.vs-lead { color: var(--text); }
 .vs-cols.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .vs-item { display: flex; justify-content: space-between; gap: 10px; padding: 7px 0; border-top: 1px solid var(--line-soft); font-size: 14px; }
 @media (max-width: 760px) { .vs-cols.three { grid-template-columns: 1fr; } .vs-head .day-pick { margin-left: 0; } }
+.label-like { color: var(--text-2); font-size: 14px; }
+.palette-options { display: flex; gap: 8px; flex-wrap: wrap; }
+.palette-option { display: inline-flex; align-items: center; gap: 10px; height: 40px; padding: 0 14px 0 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--raised); color: var(--text-2); font: inherit; font-size: 14px; cursor: pointer; }
+.palette-option[aria-checked="true"] { border-color: var(--text-2); color: var(--text); }
+.palette-option:disabled { cursor: progress; }
+.swatches { display: inline-flex; }
+.swatches i { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--raised); margin-left: -5px; }
+.swatches i:first-child { margin-left: 0; }
 .update-banner { display: flex; gap: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 14px 16px 14px 20px; margin: 0 0 24px; border-radius: var(--r); background: color-mix(in srgb, var(--human) 14%, var(--panel)); border: 1px solid color-mix(in srgb, var(--human) 40%, transparent); color: var(--text-2); font-size: 14px; }
 .update-banner b { color: var(--text); font-weight: 500; }
 .notice-err { color: var(--danger); background: color-mix(in srgb, #e05a3a 14%, var(--panel)); }

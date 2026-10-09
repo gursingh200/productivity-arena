@@ -6,6 +6,7 @@ import { BrandMark } from "@/components/BrandMark";
 import { NavLinks } from "@/components/NavLinks";
 import { EasterEggs } from "@/components/EasterEggs";
 import { checkInsomniac } from "@/lib/achievements";
+import { colourCss } from "@/lib/colours";
 import { requireViewer } from "@/lib/viewer";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -15,6 +16,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   await checkInsomniac(viewer.id, viewer.timezone);
   return (
     <>
+      {/* Their colour choices (Settings → Colours); nothing for the defaults. */}
+      {colourCss(viewer.palette, viewer.accent) ? <style>{colourCss(viewer.palette, viewer.accent)}</style> : null}
       <header className="topbar">
         <Link href="/" className="brand"><BrandMark /><span>Arena</span></Link>
         <NavLinks />

@@ -3,6 +3,8 @@ import { db } from "@/db";
 import { linearAccounts, users } from "@/db/schema";
 import { requireViewer } from "@/lib/viewer";
 import AwayForm from "./AwayForm";
+import ColourForm from "./ColourForm";
+import { DEFAULT_ACCENT, DEFAULT_PALETTE } from "@/lib/colours";
 import LinearSettings from "./LinearSettings";
 import { awayInWeek, workDays } from "@/lib/league-db";
 import { companyTimezone, weekDays } from "@/lib/standings";
@@ -47,6 +49,14 @@ export default async function SettingsPage() {
         <div className="panel">
           <p className="rule"><b>Give to get.</b> You see a stat of someone else only if you share that stat too. Nobody can see more, admins included.</p>
           <SharingForm initial={shares(user)} submitLabel="Save sharing" />
+        </div>
+      </section>
+
+      <section className="settings-section" id="colours">
+        <h2 className="section-label" style={{ marginTop: 0 }}>Colours</h2>
+        <div className="panel">
+          <p className="help" style={{ marginTop: 0 }}>Only you see your colours. Every palette here stays readable for colour-blind eyes.</p>
+          <ColourForm palette={user.palette ?? DEFAULT_PALETTE} accent={user.accent ?? DEFAULT_ACCENT} />
         </div>
       </section>
 
