@@ -335,6 +335,11 @@ td.vs-lead { color: var(--text); }
 .swatches { display: inline-flex; }
 .swatches i { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--raised); margin-left: -5px; }
 .swatches i:first-child { margin-left: 0; }
+.release { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 24px; margin-bottom: 20px; }
+.release-when { padding-top: 24px; display: flex; flex-direction: column; gap: 2px; }
+.release-when time { font-weight: 500; }
+.release-list { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 10px; color: var(--text-2); line-height: 1.5; }
+@media (max-width: 760px) { .release { grid-template-columns: 1fr; gap: 8px; } .release-when { padding-top: 0; } }
 .update-banner { display: flex; gap: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 14px 16px 14px 20px; margin: 0 0 24px; border-radius: var(--r); background: color-mix(in srgb, var(--human) 14%, var(--panel)); border: 1px solid color-mix(in srgb, var(--human) 40%, transparent); color: var(--text-2); font-size: 14px; }
 .update-banner b { color: var(--text); font-weight: 500; }
 .notice-err { color: var(--danger); background: color-mix(in srgb, #e05a3a 14%, var(--panel)); }

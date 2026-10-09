@@ -32,6 +32,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <Link href="/compare">Compare</Link>
             <Link href="/connect">Connect a Mac</Link>
             <Link href="/settings">Settings</Link>
+            <Link href="/changelog">What’s new</Link>
             {viewer.role === "admin" ? <Link href="/admin">Team overview</Link> : null}
             <hr />
             <form action={async () => { "use server"; await signOut({ redirectTo: "/auth/signin" }); }}>
