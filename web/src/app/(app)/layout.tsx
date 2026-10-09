@@ -42,7 +42,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <div className="account-menu">
             <Link href={`/u/${viewer.handle}`}>Your profile</Link>
             <Link href="/day">Your day</Link>
-            <Link href="/compare">Compare</Link>
             <Link href="/connect">Connect a Mac</Link>
             <Link href="/settings">Settings</Link>
             <Link href="/changelog">What’s new</Link>

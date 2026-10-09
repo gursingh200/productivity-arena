@@ -1,8 +1,9 @@
+import Link from "next/link";
 import { asc, isNotNull } from "drizzle-orm";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import {
-  ACHIEVEMENTS, evaluateAchievements, globalRates, measureAchievements, unlocksOf, type Achievement, type Progress,
+  ACHIEVEMENTS, evaluateAchievements, globalRates, measureAchievements, recordEvent, unlocksOf, type Achievement, type Progress,
 } from "@/lib/achievements";
 import { PersonSelect } from "@/components/PersonSelect";
 import { CATEGORY_LABEL, visibility } from "@/lib/sharing";
@@ -48,10 +49,12 @@ function Status({ who, unlocked, progress, tz, color }: { who: string; unlocked?
  */
 export default async function AchievementsPage({ searchParams }: { searchParams: Promise<{ vs?: string }> }) {
   const viewer = await requireViewer();
-  await evaluateAchievements(viewer.id); // up to date as of now
   const { vs } = await searchParams;
   const people = await db.query.users.findMany({ where: isNotNull(users.handle), orderBy: [asc(users.name)] });
   const rival = vs ? people.find((p) => p.handle === vs && p.id !== viewer.id) ?? null : null;
+  // Comparing here counts toward Rivalry, same as on /compare.
+  if (rival) await recordEvent(viewer.id, "compare", rival.id);
+  await evaluateAchievements(viewer.id); // up to date as of now
   const see = rival ? visibility(viewer, rival) : null;
 
   const [{ active, counts }, unlocks, mineProgress, theirProgress] = await Promise.all([
@@ -125,6 +128,7 @@ export default async function AchievementsPage({ searchParams }: { searchParams:
           </div>
         ) : null}
       </section>
+      {rival ? <Link href={`/compare?with=${rival.handle}`} className="more-link">Full comparison with {rivalName}</Link> : null}
     </div>
   );
 }
