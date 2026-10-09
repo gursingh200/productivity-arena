@@ -385,6 +385,9 @@ td.vs-lead { color: var(--text); }
 .look-progress { grid-column: 1 / -1; height: 4px; border-radius: 2px; background: var(--raised); }
 .look-progress i { display: block; width: 62%; height: 100%; border-radius: 2px; background: var(--xp); }
 @media (max-width: 900px) { .look { grid-template-columns: 1fr; } .look-preview { position: static; order: -1; } }
+.check { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; margin-top: 2px; }
+.check input { accent-color: var(--xp); }
+.member-row { align-items: center; gap: 10px; }
 .update-banner { display: flex; gap: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 14px 16px 14px 20px; margin: 0 0 24px; border-radius: var(--r); background: color-mix(in srgb, var(--human) 14%, var(--panel)); border: 1px solid color-mix(in srgb, var(--human) 40%, transparent); color: var(--text-2); font-size: 14px; }
 .update-banner b { color: var(--text); font-weight: 500; }
 .notice-err { color: var(--danger); background: color-mix(in srgb, #e05a3a 14%, var(--panel)); }

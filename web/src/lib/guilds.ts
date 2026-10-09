@@ -7,12 +7,13 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { guilds, users, type User } from "@/db/schema";
 import { getViewer } from "@/lib/viewer";
+import { isAdmin } from "@/lib/roles";
 
 /** The signed-in admin, or a 401/403 response to return. */
 export async function requireAdmin(): Promise<User | NextResponse> {
   const viewer = await getViewer();
   if (!viewer) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (viewer.role !== "admin") return NextResponse.json({ error: "Admins only" }, { status: 403 });
+  if (!isAdmin(viewer)) return NextResponse.json({ error: "Admins only" }, { status: 403 });
   return viewer;
 }
 
@@ -29,7 +30,8 @@ export async function uniqueSlug(name: string): Promise<string> {
   }
 }
 
+/** Moves someone to a guild (or none). Guild admin rights don't move with them. */
 export async function setGuild(userId: string, guildId: string | null): Promise<boolean> {
-  const updated = await db.update(users).set({ guildId }).where(eq(users.id, userId)).returning({ id: users.id });
+  const updated = await db.update(users).set({ guildId, guildAdmin: false }).where(eq(users.id, userId)).returning({ id: users.id });
   return updated.length > 0;
 }

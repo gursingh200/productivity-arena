@@ -10,6 +10,7 @@ import { addDays } from "@/lib/timezone";
 import { visibility } from "@/lib/sharing";
 import { requireViewer } from "@/lib/viewer";
 import GuildManager from "./GuildManager";
+import { isAdmin, isOwner } from "@/lib/roles";
 
 const WEEK = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -24,7 +25,7 @@ function synced(d: Date | null) {
 /** Team table: human and agent hours per person for one company week (spec §7). */
 export default async function AdminPage({ searchParams }: { searchParams: Promise<{ week?: string }> }) {
   const viewer = await requireViewer();
-  if (viewer.role !== "admin") redirect("/");
+  if (!isAdmin(viewer)) redirect("/");
 
   const { thisWeek } = weekDays(new Date());
   const requested = (await searchParams).week;
@@ -113,7 +114,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
                     <Avatar name={r.user.name} image={r.user.image} size={28} />
                     <span className="team-who">
                       <span className="team-name">{r.user.name ?? `@${r.user.handle}`}</span>
-                      <span className="help">{r.user.guild?.name ?? "No guild"}{r.user.role === "admin" ? ", admin" : ""}</span>
+                      <span className="help">{r.user.guild?.name ?? "No guild"}{r.user.role === "owner" ? ", owner" : r.user.role === "admin" ? ", admin" : ""}{r.user.guildAdmin ? ", guild admin" : ""}</span>
                     </span>
                   </Link>
                 </td>
@@ -135,7 +136,8 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
       <p className="help" style={{ marginTop: -6, marginBottom: 14 }}>Each guild gets one shared quest a week. When it’s done, everyone in it with at least 1 hour that week gets the XP.</p>
       <GuildManager
         guilds={allGuilds.map((g) => ({ id: g.id, name: g.name, members: people.filter((p) => p.guildId === g.id).length }))}
-        people={people.map((p) => ({ id: p.id, name: p.name ?? `@${p.handle}`, guildId: p.guildId }))
+        canSetRoles={isOwner(viewer)}
+        people={people.map((p) => ({ id: p.id, name: p.name ?? `@${p.handle}`, guildId: p.guildId, guildAdmin: p.guildAdmin, role: p.role }))
           .sort((a, b) => a.name.localeCompare(b.name))}
       />
     </div>

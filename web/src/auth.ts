@@ -7,6 +7,7 @@ import { users, accounts, sessions, verificationTokens } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { accessConfig, devEmailAllowed, googleAllowed } from "@/lib/access";
+import { applyOwner, ownerEmail } from "@/lib/roles";
 
 const access = accessConfig();
 
@@ -118,6 +119,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (allUsers.length === 1 && user.id) {
         await db.update(users).set({ role: "admin" }).where(eq(users.id, user.id));
       }
+      // The owner (ARENA_OWNER_EMAIL) gets the role as soon as they sign up.
+      if (user.email && user.email.toLowerCase() === ownerEmail()) await applyOwner();
       // Set handle from email if not set
       if (user.email && user.id) {
         const handle = user.email.split("@")[0]?.toLowerCase().replace(/[^a-z0-9]/g, "") ?? null;

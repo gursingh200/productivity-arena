@@ -102,6 +102,7 @@ Web app (environment variables; see [`web/.env.example`](web/.env.example)):
 | `ALLOWED_EMAIL_DOMAIN`, `ALLOWED_EMAILS` | Who can join |
 | `PUBLIC_BASE_URL` | Your web app's address, used in Mac pairing links |
 | `ARENA_TIMEZONE` | The timezone leaderboard weeks follow |
+| `ARENA_OWNER_EMAIL` | Optional: the owner, who can make and remove admins. Applied on deploy and when they sign up. |
 | `ARENA_START_DATE` | Optional `YYYY-MM-DD`: nothing before this day counts. Macs backfill past agent logs, so set it to your launch day to give everyone the same start. Older data is deleted on each deploy. |
 | `ARENA_RELEASES_REPO` | `owner/repo` with your Mac releases, for the site's download link. On Vercel it defaults to the repo it deploys from. |
 

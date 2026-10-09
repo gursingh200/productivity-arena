@@ -18,7 +18,8 @@ import { relations } from "drizzle-orm";
 
 // ─── Enums ────────────────────────────────────────────────────────────────────
 
-export const roleEnum = pgEnum("role", ["member", "admin"]);
+/** owner (one person, ARENA_OWNER_EMAIL) > admin > member. */
+export const roleEnum = pgEnum("role", ["member", "admin", "owner"]);
 export const questKindEnum = pgEnum("quest_kind", ["live", "daily", "weekly", "guild"]);
 export const questStateEnum = pgEnum("quest_state", [
   "offered",
@@ -58,6 +59,8 @@ export const users = pgTable("users", {
   bio: text("bio"),
   role: roleEnum("role").notNull().default("member"),
   guildId: uuid("guild_id").references(() => guilds.id, { onDelete: "set null" }),
+  /** Can add people without a guild to their own guild and see its stats. */
+  guildAdmin: boolean("guild_admin").notNull().default(false),
   timezone: text("timezone").notNull().default("UTC"),
   /** When achievements were last checked from this person's data (throttles the check). */
   achievementsCheckedAt: timestamp("achievements_checked_at", { withTimezone: true }),

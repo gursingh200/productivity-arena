@@ -11,6 +11,7 @@ import { appearanceCss, appearanceOf } from "@/lib/colours";
 import { getViewer } from "@/lib/viewer";
 import type { Metadata } from "next";
 import { requireViewer } from "@/lib/viewer";
+import { isAdmin, isGuildAdmin } from "@/lib/roles";
 
 /** The tab icon follows the accent colour. */
 export async function generateMetadata(): Promise<Metadata> {
@@ -45,7 +46,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <Link href="/connect">Connect a Mac</Link>
             <Link href="/settings">Settings</Link>
             <Link href="/changelog">What’s new</Link>
-            {viewer.role === "admin" ? <Link href="/admin">Team overview</Link> : null}
+            {isGuildAdmin(viewer) ? <Link href="/guild">Your guild</Link> : null}
+            {isAdmin(viewer) ? <Link href="/admin">Team overview</Link> : null}
             <hr />
             <form action={async () => { "use server"; await signOut({ redirectTo: "/auth/signin" }); }}>
               <button type="submit">Sign out</button>

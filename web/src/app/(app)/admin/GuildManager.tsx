@@ -5,10 +5,12 @@ import { useState } from "react";
 
 interface Props {
   guilds: Array<{ id: string; name: string; members: number }>;
-  people: Array<{ id: string; name: string; guildId: string | null }>;
+  people: Array<{ id: string; name: string; guildId: string | null; guildAdmin: boolean; role: "member" | "admin" | "owner" }>;
+  /** Only the owner can make or remove admins. */
+  canSetRoles: boolean;
 }
 
-export default function GuildManager({ guilds, people }: Props) {
+export default function GuildManager({ guilds, people, canSetRoles }: Props) {
   const router = useRouter();
   const [newName, setNewName] = useState("");
   const [busy, setBusy] = useState(false);
@@ -75,8 +77,24 @@ export default function GuildManager({ guilds, people }: Props) {
       <section className="panel c7">
         <div className="panel-head"><h2 className="panel-title">Members</h2><span className="panel-note">Each person is in one guild at most</span></div>
         {people.map((p) => (
-          <div className="device-row" key={p.id}>
-            <div style={{ flex: 1 }} className="device-name">{p.name}</div>
+          <div className="device-row member-row" key={p.id}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="device-name">{p.name}</div>
+              <label className="help check">
+                <input type="checkbox" checked={p.guildAdmin} disabled={busy || !p.guildId}
+                  onChange={(e) => void call(`/api/admin/members/${p.id}/guild-admin`, "PUT", { guildAdmin: e.target.checked })} />
+                Guild admin{p.guildId ? "" : " (needs a guild)"}
+              </label>
+            </div>
+            {canSetRoles ? (
+              p.role === "owner" ? <span className="help" style={{ width: 120, textAlign: "right" }}>Owner</span> : (
+                <select className="input" style={{ width: 120 }} aria-label={`Role for ${p.name}`} disabled={busy} value={p.role}
+                  onChange={(e) => void call(`/api/admin/members/${p.id}/role`, "PUT", { role: e.target.value })}>
+                  <option value="member">Member</option>
+                  <option value="admin">Admin</option>
+                </select>
+              )
+            ) : null}
             <select className="input" style={{ width: 200 }} aria-label={`Guild for ${p.name}`} disabled={busy || guilds.length === 0}
               value={p.guildId ?? ""} onChange={(e) => void call(`/api/admin/members/${p.id}/guild`, "PUT", { guildId: e.target.value || null })}>
               <option value="">No guild</option>

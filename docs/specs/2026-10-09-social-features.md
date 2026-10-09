@@ -94,3 +94,23 @@ Nothing Google-related is stored on the server.
 
 A page listing what shipped and when, in plain language, newest first; the
 entries for this release are written as part of it. Linked from the account menu.
+
+## 7. Roles
+
+- **Owner**: one person, `ARENA_OWNER_EMAIL` (deployment setting). Everything an
+  admin can do, plus making and removing admins (Team page).
+- **Admin**: guilds, guild admins, the Team page, all bug reports.
+- **Guild admin**: a member who sees their guild's page (`/guild`: totals for
+  this week and the last four, each member's week) and can add people who have
+  no guild yet. Moving someone out of a guild stays with admins. Moving a
+  person to another guild drops their guild admin rights.
+- Sharing rules apply to everyone, owner included: totals add up only people
+  who share each category with the viewer.
+
+## 8. Appearance (Settings → Appearance)
+
+Background (5), palette (4), accent (6) and bar style (solid, striped, dotted,
+soft, outline), with a live preview that follows the pointer. Every palette is
+validated on every background. The accent colours the logo and the tab icon
+(`/api/icon?accent=`). The Mac's dashboard takes the same colours from the
+status it syncs.

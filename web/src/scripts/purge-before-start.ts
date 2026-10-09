@@ -3,10 +3,13 @@ import { purgeBeforeStart } from "@/lib/start-date";
 import { db, users } from "@/db";
 import { evaluateAchievements } from "@/lib/achievements";
 import { adoptCompanyTimezone } from "@/lib/user-timezone";
+import { applyOwner } from "@/lib/roles";
 
 purgeBeforeStart()
   .then(async ({ startDay }) => {
     console.log(startDay ? `Counting from ${startDay}; older data removed.` : "No ARENA_START_DATE set; nothing removed.");
+    const owner = await applyOwner();
+    if (owner) console.log(`Owner: ${owner}.`);
     const moved = await adoptCompanyTimezone();
     if (moved) console.log(`${moved} account(s) moved from UTC to the company timezone.`);
     // Achievements for what already happened (new achievements on older data).
