@@ -99,7 +99,7 @@ export default async function LeaderboardPage({ searchParams }: { searchParams: 
               <span className="split-nums num">
                 <span>Human {r.weeklyHumanSec === null ? "not shared" : hours(r.weeklyHumanSec)}</span>
                 <span>Agents {r.weeklyAgentSec === null ? "not shared" : hours(r.weeklyAgentSec)}</span>
-                {showTotal && r.weeklyAgentWorkSec !== null ? <span>Total agents {hours(r.weeklyAgentWorkSec)}{extra(r) > 0 ? ` (+${hours(extra(r))} sub-agents)` : ""}</span> : null}
+                {extra(r) > 0 ? <span>Sub-agents +{hours(extra(r))}</span> : null}
               </span>
             </span>
             <span className="board-score num">{score(r.value)}</span>
