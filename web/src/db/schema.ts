@@ -139,6 +139,12 @@ export const devices = pgTable("devices", {
   agentVersion: text("agent_version"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  /**
+   * End of this device's one resend window: opened by its first upload marked
+   * `resend` (after pairing, or once after updating), during which it may
+   * replace its own minutes up to RESEND_DAYS old. Null = not used yet.
+   */
+  resendUntil: timestamp("resend_until", { withTimezone: true }),
 });
 
 // ─── Minute-level data ────────────────────────────────────────────────────────

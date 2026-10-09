@@ -60,6 +60,8 @@ export const IngestPayloadSchema = z.object({
   chats: z.array(ChatEntrySchema).optional().default([]),
   /** Chats the device no longer has (e.g. sub-agent sessions merged into their parent). */
   deletedChats: z.array(z.string().regex(/^[0-9a-f]{16}$/)).optional().default([]),
+  /** Part of a resend of the last week (after pairing, or once after updating). */
+  resend: z.boolean().optional().default(false),
 });
 
 export const MAX_MINUTES = 1440;

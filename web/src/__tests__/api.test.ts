@@ -362,6 +362,31 @@ describe.skipIf(!DB_URL)("device API", async () => {
     expect(apps).toEqual(["com.first.app"]);
   });
 
+  it("lets a resend replace this device's minutes up to a week old, once, within its window", async () => {
+    const app = (id: string) => [{ id, name: id, sec: 60 }];
+    const threeDays = minuteIso(3 * 24 * 60);
+    const eightDays = minuteIso(8 * 24 * 60);
+    const appsNow = async () => (await db.select().from(schema.minuteApp).where(eq(schema.minuteApp.userId, userId)))
+      .map((r) => `${r.t.toISOString()}|${r.bundleId}`).sort();
+    expect((await post(payload([{ t: threeDays, apps: app("com.first"), agents: [] }, { t: eightDays, apps: app("com.first"), agents: [] }]))).status).toBe(200);
+
+    // Not a resend: locked as before.
+    await post(payload([{ t: threeDays, apps: app("com.plain"), agents: [] }]));
+    expect((await appsNow()).filter((r) => r.endsWith("com.plain"))).toEqual([]);
+
+    // A resend replaces 3 days back, but not 8.
+    await post({ ...payload([{ t: threeDays, apps: app("com.resend"), agents: [] }, { t: eightDays, apps: app("com.resend"), agents: [] }]), resend: true });
+    expect(await appsNow()).toEqual([
+      `${new Date(eightDays).toISOString()}|com.first`, `${new Date(threeDays).toISOString()}|com.resend`,
+    ].sort());
+
+    // Once the window has closed, a resend is locked like any other upload; the window never reopens.
+    await db.update(schema.devices).set({ resendUntil: new Date(Date.now() - 1000) }).where(eq(schema.devices.id, deviceId));
+    await post({ ...payload([{ t: threeDays, apps: app("com.late"), agents: [] }]), resend: true });
+    expect((await appsNow()).filter((r) => r.endsWith("com.late"))).toEqual([]);
+    await db.update(schema.devices).set({ resendUntil: null }).where(eq(schema.devices.id, deviceId));
+  });
+
   it("deletes this device's chats listed in deletedChats", async () => {
     await post(payload([], [chat("aaaaaaaaaaaaaaaa", 60, 1, 10), chat("bbbbbbbbbbbbbbbb", 60, 1, 10)]));
     expect((await post({ ...payload([]), deletedChats: ["aaaaaaaaaaaaaaaa"] })).status).toBe(200);

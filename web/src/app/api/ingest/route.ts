@@ -5,7 +5,7 @@ import { chats, devices, minuteAgent, minuteApp, minuteMeeting, users } from "@/
 import { authenticateDevice } from "@/lib/device-auth";
 import { IngestPayloadSchema, MAX_CHATS, MAX_MINUTES } from "@/lib/ingest-schema";
 import { adoptEarlierPairings } from "@/lib/device-merge";
-import { ingestCutoff, lockedMinutes, pruneMinutes } from "@/lib/retention";
+import { ingestCutoff, lockedMinutes, pruneMinutes, resendWindowOpen } from "@/lib/retention";
 import { evaluateAchievementsIfDue } from "@/lib/achievements";
 import { recomputeForDays, refreshAgentTotals } from "@/lib/rollup";
 import { startInstant } from "@/lib/start-date";
@@ -17,7 +17,8 @@ import { toUserDay } from "@/lib/timezone";
  * POST /api/ingest (spec §3.1). Replace semantics for the last 24
  * hours: every minute in the payload replaces what this device sent for that
  * minute before (an empty minute clears it). Older minutes can only be written
- * once; chats are replaced per (device, agent, chatId) and
+ * once, except during the device's one resend window, which reaches back a
+ * week (`resendWindowOpen`); chats are replaced per (device, agent, chatId) and
  * `deletedChats` removes this device's chats with those ids.
  */
 /** A first upload backfills a week of agent history; give it room on serverless hosts. */
@@ -64,7 +65,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const start = startInstant();
   const earliest = start && start > cutoff ? start : cutoff;
   const recent = payload.minutes.filter((m) => new Date(m.t) >= earliest);
-  const locked = await lockedMinutes(auth.deviceId, recent.map((m) => new Date(m.t)), now);
+  // A resend (after pairing, or once after updating) may replace a week of this device's own minutes.
+  const resending = await resendWindowOpen(auth.deviceId, payload.resend, now);
+  const locked = await lockedMinutes(auth.deviceId, recent.map((m) => new Date(m.t)), now, resending);
   const minutes = recent.filter((m) => !locked.has(new Date(m.t).getTime()));
 
   // The person's days follow their Mac's timezone; a change rebuilds recent days first.
