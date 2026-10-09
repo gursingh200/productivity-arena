@@ -212,7 +212,12 @@ export default async function ComparePage({ searchParams }: { searchParams: Prom
             {[{ title: "Both", list: both }, { title: "Only you", list: onlyYou }, { title: `Only ${b.name}`, list: onlyThem }].map(({ title, list }) => (
               <div key={title}>
                 <div className="help" style={{ marginBottom: 8 }}>{title} ({list.length})</div>
-                {list.length === 0 ? <div className="muted" style={{ fontSize: 14 }}>None yet</div> : list.map((x) => <div className="vs-item" key={x.id}><span>{x.name}</span></div>)}
+                {list.length === 0 ? <div className="muted" style={{ fontSize: 14 }}>None yet</div> : list.map((x) => (
+                  <div className="vs-item has-tip" key={x.id} tabIndex={0}>
+                    <span>{x.name}</span>
+                    <span className="tip-box" role="tooltip">{x.description}</span>
+                  </div>
+                ))}
               </div>
             ))}
           </div>

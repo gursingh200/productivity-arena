@@ -19,6 +19,8 @@ export type Axis = keyof SkillsRadar;
 export type SkillScale = "team" | "guild" | "absolute";
 
 export interface SkillScores {
+  /** The measures themselves (absolute scale, not capped), for head-to-head comparisons. */
+  raw: SkillsRadar;
   absolute: SkillsRadar;
   team: SkillsRadar;
   /** Null when the person has no guild. */
@@ -85,6 +87,7 @@ export const allSkillScores = cache(async (): Promise<Map<string, SkillScores>> 
   for (const [id, m] of measures) {
     const guildId = guildOf.get(id);
     out.set(id, {
+      raw: m,
       absolute: Object.fromEntries(AXES.map((axis) => [axis, Math.min(10, m[axis])])) as unknown as SkillsRadar,
       team: rank(id, everyone),
       guild: guildId ? rank(id, guildMembers.get(guildId) ?? []) : null,
@@ -96,5 +99,5 @@ export const allSkillScores = cache(async (): Promise<Map<string, SkillScores>> 
 /** Zero scores for someone not active in the last 30 days. */
 export function emptyScores(): SkillScores {
   const zero = Object.fromEntries(AXES.map((axis) => [axis, 0])) as unknown as SkillsRadar;
-  return { absolute: zero, team: zero, guild: null };
+  return { raw: zero, absolute: zero, team: zero, guild: null };
 }

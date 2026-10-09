@@ -102,7 +102,7 @@ export interface ProfileData {
   apps: { top: AppTotal[]; calls: AppTotal[] | null } | null;
   /** Each axis is null when the viewer can't see a category it's computed from. */
   /** Scores on each scale; an axis is null when the viewer can't see what it's computed from. */
-  skills: { absolute: SkillScoresView; team: SkillScoresView; guild: SkillScoresView | null } | null;
+  skills: { raw: SkillScoresView; absolute: SkillScoresView; team: SkillScoresView; guild: SkillScoresView | null } | null;
 }
 
 export async function loadProfile(handle: string, viewer: User, now = new Date()): Promise<ProfileData | null> {
@@ -217,6 +217,7 @@ export type SkillScoresView = Record<keyof SkillsRadar, number | null>;
 
 export function scaledSkills(scores: SkillScores, visible: Visibility): NonNullable<ProfileData["skills"]> {
   return {
+    raw: visibleSkills(scores.raw, visible),
     absolute: visibleSkills(scores.absolute, visible),
     team: visibleSkills(scores.team, visible),
     guild: scores.guild ? visibleSkills(scores.guild, visible) : null,

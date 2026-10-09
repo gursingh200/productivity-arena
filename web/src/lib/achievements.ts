@@ -100,41 +100,50 @@ export async function unlock(userId: string, ids: string[], at: Date = new Date(
   return inserted.map((r) => r.id);
 }
 
-/** Checks every data-based achievement for one person and saves the new unlocks. */
-export async function evaluateAchievements(userId: string, now: Date = new Date()): Promise<string[]> {
-  const user = await db.query.users.findFirst({ where: eq(users.id, userId), columns: { timezone: true, guildId: true } });
-  if (!user) return [];
+/** How far someone is towards an achievement: done when value ≥ target. */
+export interface Progress {
+  value: number;
+  target: number;
+  /** How to show the numbers: hours, minutes, a count, a ratio (×), or just done/not done. */
+  unit: "h" | "min" | "count" | "x" | "done";
+}
+
+/** Progress towards every data-based achievement (the event-based ones are counted in `recordEvent`). */
+export async function measureAchievements(userId: string, now: Date = new Date()): Promise<Map<string, Progress>> {
+  const out = new Map<string, Progress>();
+  const user = await db.query.users.findFirst({ where: eq(users.id, userId), columns: { timezone: true } });
+  if (!user) return out;
   const tz = user.timezone;
   const today = toUserDay(now, tz);
-  const have = new Set((await db.select({ id: userAchievements.achievementId }).from(userAchievements)
-    .where(eq(userAchievements.userId, userId))).map((r) => r.id));
-  const earned: string[] = [];
-  const check = (id: string, ok: boolean) => { if (ok && !have.has(id)) earned.push(id); };
+  const put = (id: string, value: number, target: number, unit: Progress["unit"]) => out.set(id, { value, target, unit });
+  const flag = (id: string, ok: boolean) => put(id, ok ? 1 : 0, 1, "done");
+  const H = 3600;
 
   const days = await db.select().from(dailyRollup).where(eq(dailyRollup.userId, userId));
   const sum = (f: (d: (typeof days)[number]) => number) => days.reduce((s, d) => s + f(d), 0);
+  const max = (f: (d: (typeof days)[number]) => number) => days.reduce((m, d) => Math.max(m, f(d)), 0);
   const isWeekday = (day: string) => ![0, 6].includes(new Date(`${day}T12:00:00Z`).getUTCDay());
   const byDay = new Map(days.map((d) => [d.day, d]));
 
-  check("first_steps", sum((d) => d.humanSec) > 0);
-  check("first_agent", sum((d) => d.agentSec) > 0);
-  check("deep_diver", days.some((d) => d.longestFocusSec >= 90 * 60));
-  check("zen", days.some((d) => d.longestFocusSec >= 3 * 3600));
-  check("full_day", days.some((d) => d.humanSec >= 8 * 3600));
-  check("centurion", sum((d) => d.humanSec) >= 100 * 3600);
-  check("hundred_hours", sum((d) => d.agentSec) >= 100 * 3600);
-  check("thousand_threads", sum((d) => Math.max(d.agentWorkSec, d.agentSec)) >= 1000 * 3600);
-  check("squad", days.some((d) => Math.max(d.peakThreads, d.peakParallel) >= 5));
-  check("swarm", days.some((d) => Math.max(d.peakThreads, d.peakParallel) >= 10));
-  check("polyglot", days.some((d) => Object.values(d.agentSecByAgent as Record<string, number>).filter((s) => s > 0).length >= 3));
-  check("fifty_fifty", days.some((d) => d.humanSec >= 7200 && d.agentSec >= 7200
+  flag("first_steps", sum((d) => d.humanSec) > 0);
+  flag("first_agent", sum((d) => d.agentSec) > 0);
+  put("deep_diver", max((d) => d.longestFocusSec) / 60, 90, "min");
+  put("zen", max((d) => d.longestFocusSec) / 60, 180, "min");
+  put("full_day", max((d) => d.humanSec) / H, 8, "h");
+  put("centurion", sum((d) => d.humanSec) / H, 100, "h");
+  put("hundred_hours", sum((d) => d.agentSec) / H, 100, "h");
+  put("thousand_threads", sum((d) => Math.max(d.agentWorkSec, d.agentSec)) / H, 1000, "h");
+  put("squad", max((d) => Math.max(d.peakThreads, d.peakParallel)), 5, "count");
+  put("swarm", max((d) => Math.max(d.peakThreads, d.peakParallel)), 10, "count");
+  put("polyglot", max((d) => Object.values(d.agentSecByAgent as Record<string, number>).filter((s) => s > 0).length), 3, "count");
+  flag("fifty_fifty", days.some((d) => d.humanSec >= 7200 && d.agentSec >= 7200
     && Math.abs(d.humanSec - d.agentSec) <= 0.05 * Math.max(d.humanSec, d.agentSec)));
   // Finished days only: a meeting later today would make it untrue.
-  check("makers_day", days.some((d) => d.day < today && isWeekday(d.day) && d.humanSec >= 4 * 3600 && d.meetingSec === 0));
-  check("ghost", days.some((d) => d.day < today && d.agentSec >= 4 * 3600 && d.humanSec === 0 && d.meetingSec === 0));
+  flag("makers_day", days.some((d) => d.day < today && isWeekday(d.day) && d.humanSec >= 4 * H && d.meetingSec === 0));
+  flag("ghost", days.some((d) => d.day < today && d.agentSec >= 4 * H && d.humanSec === 0 && d.meetingSec === 0));
   // Only finished days: today passes through 8h 00m on its way up.
-  check("right_on_time", days.some((d) => d.day < today && d.humanSec === 8 * 3600));
-  check("weekend_warrior", days.some((d) => new Date(`${d.day}T12:00:00Z`).getUTCDay() === 6 && d.humanSec > 0
+  flag("right_on_time", days.some((d) => d.day < today && d.humanSec === 8 * H));
+  flag("weekend_warrior", days.some((d) => new Date(`${d.day}T12:00:00Z`).getUTCDay() === 6 && d.humanSec > 0
     && (byDay.get(addDays(d.day, 1))?.humanSec ?? 0) > 0));
 
   // Streaks count weekdays only; weekends neither break nor extend them.
@@ -149,71 +158,66 @@ export async function evaluateAchievements(userId: string, now: Date = new Date(
       best = Math.max(best, streak);
     }
   }
-  check("on_a_roll", best >= 5);
-  check("unstoppable", best >= 20);
+  put("on_a_roll", best, 5, "count");
+  put("unstoppable", best, 20, "count");
 
-  // Weeks (company weeks): 2× parallelism with 5+ agent hours.
+  // Weeks (company weeks): best parallelism in a week with 5+ agent hours.
   const weeks = new Map<string, { agent: number; work: number }>();
   for (const d of days) {
-    const dow = (new Date(`${d.day}T12:00:00Z`).getUTCDay() + 6) % 7;
-    const monday = addDays(d.day, -dow);
+    const monday = addDays(d.day, -((new Date(`${d.day}T12:00:00Z`).getUTCDay() + 6) % 7));
     const w = weeks.get(monday) ?? { agent: 0, work: 0 };
     w.agent += d.agentSec;
     w.work += Math.max(d.agentWorkSec, d.agentSec);
     weeks.set(monday, w);
   }
-  check("conductor", [...weeks.values()].some((w) => w.agent >= 5 * 3600 && w.work >= 2 * w.agent));
+  put("conductor", [...weeks.values()].filter((w) => w.agent >= 5 * H).reduce((m, w) => Math.max(m, w.work / w.agent), 0), 2, "x");
 
   // Hours of the day need minutes, which the server keeps for about two weeks.
-  if (!have.has("early_bird") || !have.has("night_owl") || !have.has("night_shift")) {
-    const since = new Date(now.getTime() - 16 * 86_400_000);
-    const human = await db.selectDistinct({ t: minuteApp.t }).from(minuteApp).where(and(eq(minuteApp.userId, userId), gte(minuteApp.t, since)));
-    const agent = await db.select({ t: minuteAgent.t, sec: sql<number>`SUM(${minuteAgent.agentSec})` }).from(minuteAgent)
-      .where(and(eq(minuteAgent.userId, userId), gte(minuteAgent.t, since))).groupBy(minuteAgent.t);
-    const humanMinutes = new Set(human.map((h) => h.t.getTime()));
-    const earlyDays = new Set(human.filter((h) => localHour(h.t, tz) < 7 && localHour(h.t, tz) >= 4).map((h) => toUserDay(h.t, tz)));
-    const owlDays = new Set(human.filter((h) => localHour(h.t, tz) < 4).map((h) => toUserDay(h.t, tz)));
-    check("early_bird", earlyDays.size >= 5);
-    check("night_owl", owlDays.size >= 5);
-    // Overnight agent time while you weren't active, per night.
-    const nights = new Map<string, number>();
-    for (const a of agent) {
-      if (localHour(a.t, tz) >= 6 || humanMinutes.has(a.t.getTime())) continue;
-      const night = toUserDay(a.t, tz);
-      nights.set(night, (nights.get(night) ?? 0) + Number(a.sec));
-    }
-    check("night_shift", [...nights.values()].some((s) => s >= 7200));
+  const since = new Date(now.getTime() - 16 * 86_400_000);
+  const human = await db.selectDistinct({ t: minuteApp.t }).from(minuteApp).where(and(eq(minuteApp.userId, userId), gte(minuteApp.t, since)));
+  const agent = await db.select({ t: minuteAgent.t, sec: sql<number>`SUM(${minuteAgent.agentSec})` }).from(minuteAgent)
+    .where(and(eq(minuteAgent.userId, userId), gte(minuteAgent.t, since))).groupBy(minuteAgent.t);
+  const humanMinutes = new Set(human.map((h) => h.t.getTime()));
+  put("early_bird", new Set(human.filter((h) => localHour(h.t, tz) < 7 && localHour(h.t, tz) >= 4).map((h) => toUserDay(h.t, tz))).size, 5, "count");
+  put("night_owl", new Set(human.filter((h) => localHour(h.t, tz) < 4).map((h) => toUserDay(h.t, tz))).size, 5, "count");
+  // Overnight agent time while you weren't active, per night.
+  const nights = new Map<string, number>();
+  for (const a of agent) {
+    if (localHour(a.t, tz) >= 6 || humanMinutes.has(a.t.getTime())) continue;
+    const night = toUserDay(a.t, tz);
+    nights.set(night, (nights.get(night) ?? 0) + Number(a.sec));
   }
+  put("night_shift", Math.max(0, ...nights.values()) / H, 2, "h");
 
   const level = computeLevel(Number((await db.select({ xp: sql<number>`COALESCE(SUM(${xpLedger.xp}), 0)` }).from(xpLedger)
     .where(eq(xpLedger.userId, userId)))[0]?.xp ?? 0)).level;
-  check("level_5", level >= 5);
-  check("level_10", level >= 10);
-  check("level_25", level >= 25);
+  put("level_5", level, 5, "count");
+  put("level_10", level, 10, "count");
+  put("level_25", level, 25, "count");
 
   const leagues = await db.select({ league: leagueWeeks.league, move: leagueWeeks.move }).from(leagueWeeks).where(eq(leagueWeeks.userId, userId));
-  check("promoted", leagues.some((l) => l.move === "up"));
-  check("legend", leagues.some((l) => l.league === "legend"));
+  flag("promoted", leagues.some((l) => l.move === "up"));
+  flag("legend", leagues.some((l) => l.league === "legend"));
 
   const done = await db.select({ kind: quests.kind, resolvedAt: quests.resolvedAt }).from(quests)
     .where(and(eq(quests.userId, userId), eq(quests.state, "completed")));
-  check("quester", done.length >= 10);
-  check("live_wire", done.filter((q) => q.kind === "live").length >= 5);
+  put("quester", done.length, 10, "count");
+  put("live_wire", done.filter((q) => q.kind === "live").length, 5, "count");
   const perDay = new Map<string, number>();
   for (const q of done) if (q.resolvedAt) perDay.set(toUserDay(q.resolvedAt, tz), (perDay.get(toUserDay(q.resolvedAt, tz)) ?? 0) + 1);
-  check("overachiever", [...perDay.values()].some((n) => n >= 3));
+  put("overachiever", Math.max(0, ...perDay.values()), 3, "count");
 
   const questXp = await db.select({ key: xpLedger.sourceKey }).from(xpLedger).where(and(eq(xpLedger.userId, userId), eq(xpLedger.source, "quest")));
   const questIds = questXp.map((r) => r.key.replace(/^quest:/, ""));
-  check("guild_hero", questIds.length > 0 && (await db.select({ id: quests.id }).from(quests)
+  flag("guild_hero", questIds.length > 0 && (await db.select({ id: quests.id }).from(quests)
     .where(and(inArray(quests.id, questIds), eq(quests.kind, "guild")))).length > 0);
 
   const [linear] = await db.select({ n: sql<number>`COUNT(*)` }).from(linearIssues)
     .where(and(eq(linearIssues.userId, userId), sql`${linearIssues.completedAt} IS NOT NULL`));
-  check("shipper", Number(linear?.n ?? 0) >= 10);
+  put("shipper", Number(linear?.n ?? 0), 10, "count");
 
   const [bugs] = await db.select({ n: sql<number>`COUNT(*)` }).from(bugReports).where(eq(bugReports.userId, userId));
-  check("squasher", Number(bugs?.n ?? 0) > 0);
+  flag("squasher", Number(bugs?.n ?? 0) > 0);
 
   const away = await db.select({ day: awayDays.day }).from(awayDays).where(eq(awayDays.userId, userId));
   const awayWeeks = new Map<string, number>();
@@ -221,8 +225,18 @@ export async function evaluateAchievements(userId: string, now: Date = new Date(
     const dow = (new Date(`${a.day}T12:00:00Z`).getUTCDay() + 6) % 7;
     if (dow < 5) awayWeeks.set(addDays(a.day, -dow), (awayWeeks.get(addDays(a.day, -dow)) ?? 0) + 1);
   }
-  check("gone_fishing", [...awayWeeks.values()].some((n) => n >= 5));
+  flag("gone_fishing", [...awayWeeks.values()].some((n) => n >= 5));
 
+  const [compares] = await db.select({ n: sql<number>`COUNT(*)` }).from(achievementEvents)
+    .where(and(eq(achievementEvents.userId, userId), eq(achievementEvents.kind, "compare")));
+  put("rivalry", Number(compares?.n ?? 0), 5, "count");
+  return out;
+}
+
+/** Checks every data-based achievement for one person and saves the new unlocks. */
+export async function evaluateAchievements(userId: string, now: Date = new Date()): Promise<string[]> {
+  const progress = await measureAchievements(userId, now);
+  const earned = [...progress].filter(([, p]) => p.value >= p.target).map(([id]) => id);
   return unlock(userId, earned, now);
 }
 

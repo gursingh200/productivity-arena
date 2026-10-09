@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Radar, SCALE_NOTE, SkillList, type Scale, type Scores } from "./Radar";
 
 export interface ScaledScores {
+  raw: Scores;
   absolute: Scores;
   team: Scores;
   guild: Scores | null;

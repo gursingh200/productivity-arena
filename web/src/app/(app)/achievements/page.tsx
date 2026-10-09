@@ -1,7 +1,9 @@
 import { asc, isNotNull } from "drizzle-orm";
 import { db } from "@/db";
 import { users } from "@/db/schema";
-import { ACHIEVEMENT_BY_ID, ACHIEVEMENTS, evaluateAchievements, globalRates, unlocksOf, type Achievement } from "@/lib/achievements";
+import {
+  ACHIEVEMENTS, evaluateAchievements, globalRates, measureAchievements, unlocksOf, type Achievement, type Progress,
+} from "@/lib/achievements";
 import { CATEGORY_LABEL, visibility } from "@/lib/sharing";
 import { requireViewer } from "@/lib/viewer";
 
@@ -13,11 +15,35 @@ function day(d: Date, tz: string) {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: tz });
 }
 
+function amount(p: Progress, v: number): string {
+  switch (p.unit) {
+    case "h": return `${v < 10 ? v.toFixed(1) : Math.floor(v)}h`;
+    case "min": return `${Math.floor(v)}m`;
+    case "x": return `${v.toFixed(1)}×`;
+    default: return String(Math.floor(v));
+  }
+}
+
+/** One person's state for one achievement: when they unlocked it, or how far along they are. */
+function Status({ who, unlocked, progress, tz, color }: { who: string; unlocked?: Date; progress?: Progress; tz: string; color: string }) {
+  // On a phone the column headings are gone, so each status names its person.
+  const name = <span className="ach-who" style={{ color }}>{who}</span>;
+  if (unlocked) return <div className="ach-status got"><span className="ach-bar"><i style={{ width: "100%", background: color }} /></span><span>{name}{day(unlocked, tz)}</span></div>;
+  if (!progress || progress.unit === "done") return <div className="ach-status"><span className="ach-bar"><i style={{ width: 0 }} /></span><span className="muted">{name}Not yet</span></div>;
+  const pct = Math.min(100, (progress.value / progress.target) * 100);
+  return (
+    <div className="ach-status">
+      <span className="ach-bar"><i style={{ width: `${pct}%`, background: color }} /></span>
+      <span className="num muted">{name}{amount(progress, progress.value)} / {amount(progress, progress.target)}</span>
+    </div>
+  );
+}
+
 /**
- * Every achievement with how rare it is (share of active people who have it),
- * yours with the date, and optionally a teammate's beside yours. Their unlocks
- * show only for categories you both share; secret ones stay hidden until you
- * find them yourself.
+ * Steam-style: every achievement with how rare it is (share of active people
+ * who have it), and your progress beside a teammate's. Their progress shows
+ * only for categories you both share; secret ones stay hidden until you find
+ * them yourself.
  */
 export default async function AchievementsPage({ searchParams }: { searchParams: Promise<{ vs?: string }> }) {
   const viewer = await requireViewer();
@@ -27,22 +53,28 @@ export default async function AchievementsPage({ searchParams }: { searchParams:
   const rival = vs ? people.find((p) => p.handle === vs && p.id !== viewer.id) ?? null : null;
   const see = rival ? visibility(viewer, rival) : null;
 
-  const { active, counts } = await globalRates();
-  const unlocks = await unlocksOf([viewer.id, ...(rival ? [rival.id] : [])]);
+  const [{ active, counts }, unlocks, mineProgress, theirProgress] = await Promise.all([
+    globalRates(),
+    unlocksOf([viewer.id, ...(rival ? [rival.id] : [])]),
+    measureAchievements(viewer.id),
+    rival ? measureAchievements(rival.id) : Promise.resolve(null),
+  ]);
   const mine = unlocks.get(viewer.id)!;
   const theirs = rival ? unlocks.get(rival.id)! : null;
   const rate = (id: string) => (counts.get(id) ?? 0) / active;
-  const list = [...ACHIEVEMENTS].sort((a, b) => rate(a.id) - rate(b.id) || a.name.localeCompare(b.name));
   const tz = viewer.timezone;
+  // Secret ones you haven't found are one line at the end, not a wall of question marks.
+  const hidden = ACHIEVEMENTS.filter((a) => a.secret && !mine.has(a.id));
+  const list = ACHIEVEMENTS.filter((a) => !hidden.includes(a)).sort((a, b) => rate(a.id) - rate(b.id) || a.name.localeCompare(b.name));
+  const rivalName = rival ? (rival.name ?? rival.handle!).split(" ")[0] ?? "" : "";
 
   return (
-    <div style={{ margin: "0 auto", maxWidth: 860 }}>
+    <div style={{ margin: "0 auto", maxWidth: 960 }}>
       <div className="day-head">
         <div>
           <h1 className="page-title">Achievements</h1>
           <p className="page-sub" style={{ marginBottom: 0 }}>
-            You’ve unlocked <b>{mine.size}</b> of {ACHIEVEMENTS.length}. Rarest first; the percentage is how many of the {active} active
-            people have each one.
+            You’ve unlocked <b>{mine.size}</b> of {ACHIEVEMENTS.length}. Rarest first; the percentage is how many of the {active} active people have each one.
           </p>
         </div>
         <form action="/achievements" className="day-pick">
@@ -50,47 +82,50 @@ export default async function AchievementsPage({ searchParams }: { searchParams:
             <option value="">Compare with…</option>
             {people.filter((p) => p.id !== viewer.id).map((p) => <option key={p.id} value={p.handle!}>{p.name ?? p.handle}</option>)}
           </select>
-          <button className="btn btn-sm btn-quiet" type="submit">Compare</button>
+          <button className="btn btn-sm" type="submit">Compare</button>
         </form>
       </div>
 
-      {rival ? (
-        <p className="help" style={{ margin: "18px 0 0" }}>
-          You and {rival.name ?? rival.handle}: you have {mine.size}, they have {[...theirs!.keys()].filter((id) => { const a = ACHIEVEMENT_BY_ID.get(id); return a !== undefined && see![a.category]; }).length} you can see.
-        </p>
-      ) : null}
-
-      <section className="panel" style={{ marginTop: 24 }}>
+      <section className={`panel ach-list${rival ? " vs" : ""}`} style={{ marginTop: 24 }}>
+        <div className="ach ach-head" aria-hidden>
+          <span />
+          <span>Achievement</span>
+          <span className="r">Have it</span>
+          <span><i className="dot" style={{ background: "#cc5fb8" }} />You</span>
+          {rival ? <span><i className="dot" style={{ background: "#a8922c" }} />{rivalName}</span> : null}
+        </div>
         {list.map((a) => {
           const got = mine.get(a.id);
-          const hidden = a.secret && !got;
           const pct = Math.round(rate(a.id) * 100);
-          const them = theirs?.get(a.id);
           const theirsVisible = see ? see[a.category] : false;
           return (
             <div className={`ach${got ? " got" : ""}`} key={a.id}>
               <span className="ach-icon" style={{ borderColor: got ? TONE[a.category] : undefined, color: got ? TONE[a.category] : undefined }} aria-hidden>
-                {hidden ? "?" : a.name.charAt(0)}
+                {a.name.charAt(0)}
               </span>
               <div className="ach-body">
-                <div className="ach-name">{hidden ? "Hidden achievement" : a.name}</div>
-                <div className="help">{hidden ? "Keep using Arena to find it." : a.description}</div>
-                <div className="ach-rate" aria-label={`${pct}% of active people`}>
-                  <span style={{ width: `${Math.max(pct, 1)}%` }} />
-                </div>
+                <div className="ach-name">{a.name}{a.secret ? <span className="you">Secret</span> : null}</div>
+                <div className="help">{a.description}</div>
               </div>
-              <div className="ach-side">
-                <div className="num">{pct}%</div>
-                <div className="help">{got ? `You, ${day(got, tz)}` : "Not yet"}</div>
-                {rival ? (
-                  <div className="help">
-                    {!theirsVisible ? `${CATEGORY_LABEL[a.category]} not shared` : them ? `${rival.name?.split(" ")[0] ?? rival.handle}, ${day(them, tz)}` : "Not them yet"}
-                  </div>
-                ) : null}
-              </div>
+              <div className="num ach-rate-num">{pct}%</div>
+              <Status who="You" unlocked={got} progress={mineProgress.get(a.id)} tz={tz} color="#cc5fb8" />
+              {rival ? (
+                theirsVisible
+                  ? <Status who={rivalName} unlocked={theirs!.get(a.id)} progress={theirProgress?.get(a.id)} tz={tz} color="#a8922c" />
+                  : <div className="ach-status"><span className="muted">{CATEGORY_LABEL[a.category]} not shared</span></div>
+              ) : null}
             </div>
           );
         })}
+        {hidden.length ? (
+          <div className="ach">
+            <span className="ach-icon" aria-hidden>?</span>
+            <div className="ach-body">
+              <div className="ach-name">{hidden.length} hidden achievement{hidden.length === 1 ? "" : "s"}</div>
+              <div className="help">Secret until you find them. Keep using Arena; some are easter eggs.</div>
+            </div>
+          </div>
+        ) : null}
       </section>
     </div>
   );

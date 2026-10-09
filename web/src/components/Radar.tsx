@@ -6,16 +6,21 @@ export type Scores = Record<keyof SkillsRadar, number | null>;
 export type Scale = "team" | "guild" | "absolute";
 
 /** The eight axes, in radar order, with what each measures (spec §6, last 30 days) and its absolute target. */
-export const SKILLS: Array<{ key: keyof SkillsRadar; name: string; what: string; target: string }> = [
-  { key: "willpower", name: "Willpower", what: "Your typical longest focus block.", target: "10 = 2 hours" },
-  { key: "consistency", name: "Consistency", what: "Weekdays with 2+ hours of your own time.", target: "10 = every weekday" },
-  { key: "endurance", name: "Endurance", what: "Your average hours on days you worked.", target: "10 = 8 hours" },
-  { key: "intensity", name: "Intensity", what: "Agent output tokens per agent-hour.", target: "10 = 200K" },
-  { key: "parallelism", name: "Parallelism", what: "Total agent hours ÷ agent hours: agents and sub-agents running side by side.", target: "10 = 3×" },
-  { key: "competitive", name: "Competitive", what: "Share of offered quests you completed.", target: "10 = all of them; 5 until you get one" },
-  { key: "camaraderie", name: "Camaraderie", what: "Your share of your guild’s hours.", target: "10 = at least an equal share" },
-  { key: "orchestration", name: "Orchestration", what: "Agent-hours per hour of your own time.", target: "10 = 3×" },
+/** `real` turns a measure (absolute scale, uncapped) back into the thing it measures, for head to head. */
+export const SKILLS: Array<{ key: keyof SkillsRadar; name: string; what: string; target: string; real: (r: number) => string }> = [
+  { key: "willpower", name: "Willpower", what: "Your typical longest focus block.", target: "10 = 2 hours", real: (r) => mins(r * 12) },
+  { key: "consistency", name: "Consistency", what: "Weekdays with 2+ hours of your own time.", target: "10 = every weekday", real: (r) => `${Math.round(r * 10)}% of weekdays` },
+  { key: "endurance", name: "Endurance", what: "Your average hours on days you worked.", target: "10 = 8 hours", real: (r) => mins(r * 48) },
+  { key: "intensity", name: "Intensity", what: "Agent output tokens per agent-hour.", target: "10 = 200K", real: (r) => `${Math.round(r * 20)}K tokens/h` },
+  { key: "parallelism", name: "Parallelism", what: "Total agent hours ÷ agent hours: agents and sub-agents running side by side.", target: "10 = 3×", real: (r) => `${(1 + r / 5).toFixed(1)}×` },
+  { key: "competitive", name: "Competitive", what: "Share of offered quests you completed.", target: "10 = all of them; 5 until you get one", real: (r) => `${Math.round(r * 10)}% of quests` },
+  { key: "camaraderie", name: "Camaraderie", what: "Your share of your guild’s hours.", target: "10 = at least an equal share", real: (r) => `${Math.round(r * 10)}% of an equal share` },
+  { key: "orchestration", name: "Orchestration", what: "Agent-hours per hour of your own time.", target: "10 = 3×", real: (r) => `${(r * 0.3).toFixed(1)}×` },
 ];
+
+function mins(m: number): string {
+  return m >= 60 ? `${Math.floor(m / 60)}h ${String(Math.round(m % 60)).padStart(2, "0")}m` : `${Math.round(m)}m`;
+}
 
 export const SCALE_NOTE: Record<Scale, string> = {
   team: "Ranked against everyone active in the last 30 days: 10 is the top, 0 the bottom.",

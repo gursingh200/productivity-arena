@@ -4,23 +4,28 @@ import { useState } from "react";
 import type { DayTotals } from "@/lib/profile";
 import { useBarPaint } from "./BarStyle";
 import { duration, shortDay } from "./format";
-import { Radar, SCALE_NOTE, SKILLS, type Scale } from "./Radar";
-import { ScaleSwitch, type ScaledScores } from "./SkillsPanel";
+import { Radar, SKILLS, type Scores } from "./Radar";
+import type { ScaledScores } from "./SkillsPanel";
 
 export interface Side { name: string; color: string }
 
-/** Both radars on one chart, a scale switch, and who leads each axis. */
+/**
+ * Both radars on one chart, scaled head to head: on each axis whoever is ahead
+ * is 10 and the other is drawn in proportion, with the real values beside it.
+ * (Ranking two people against the team or fixed targets says less about them
+ * than about everyone else.)
+ */
 export function CompareRadar({ a, b, skillsA, skillsB }: { a: Side; b: Side; skillsA: ScaledScores; skillsB: ScaledScores }) {
-  const [scale, setScale] = useState<Scale>("team");
-  const pick = (s: ScaledScores) => (scale === "guild" && s.guild ? s.guild : scale === "absolute" ? s.absolute : s.team);
-  const sa = pick(skillsA);
-  const sb = pick(skillsB);
+  const scale = (mine: number | null, other: number | null) => {
+    if (mine === null || other === null) return null;
+    const top = Math.max(mine, other);
+    return top > 0 ? (10 * mine) / top : 0;
+  };
+  const sa = Object.fromEntries(SKILLS.map(({ key }) => [key, scale(skillsA.raw[key], skillsB.raw[key])])) as Scores;
+  const sb = Object.fromEntries(SKILLS.map(({ key }) => [key, scale(skillsB.raw[key], skillsA.raw[key])])) as Scores;
   return (
     <>
-      <div className="trend-head" style={{ marginBottom: 6 }}>
-        <p className="help" style={{ margin: 0 }}>{SCALE_NOTE[scale]}</p>
-        <ScaleSwitch scale={scale} onChange={setScale} guild={skillsA.guild !== null && skillsB.guild !== null} />
-      </div>
+      <p className="help" style={{ margin: "0 0 6px" }}>Last 30 days. On each axis whoever is ahead reaches the edge; the other is drawn in proportion.</p>
       <div className="skills">
         <Radar series={[{ label: a.name, color: a.color, scores: sa }, { label: b.name, color: b.color, scores: sb }]} />
         <div>
@@ -28,15 +33,15 @@ export function CompareRadar({ a, b, skillsA, skillsB }: { a: Side; b: Side; ski
             <span><i className="dot" style={{ background: a.color }} />{a.name}</span>
             <span><i className="dot" style={{ background: b.color }} />{b.name}</span>
           </div>
-          {SKILLS.map(({ key, name }) => {
-            const x = sa[key];
-            const y = sb[key];
+          {SKILLS.map(({ key, name, real }) => {
+            const x = skillsA.raw[key];
+            const y = skillsB.raw[key];
             const lead = x === null || y === null || x === y ? null : x > y ? a : b;
             return (
               <div className="vs-row" key={key}>
-                <span className={`num${lead === a ? " vs-lead" : ""}`}>{x === null ? "–" : x.toFixed(1)}</span>
+                <span className={`vs-val${lead === a ? " vs-lead" : ""}`}>{x === null ? "–" : real(x)}</span>
                 <span className="vs-label">{name}{lead ? <small style={{ color: lead.color }}> {lead.name} {lead.name === "You" ? "lead" : "leads"}</small> : null}</span>
-                <span className={`num${lead === b ? " vs-lead" : ""}`}>{y === null ? "–" : y.toFixed(1)}</span>
+                <span className={`vs-val r${lead === b ? " vs-lead" : ""}`}>{y === null ? "–" : real(y)}</span>
               </div>
             );
           })}
