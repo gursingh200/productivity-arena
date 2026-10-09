@@ -32,8 +32,13 @@ export default async function LeaderboardPage({ searchParams }: { searchParams: 
   const score = (value: number) =>
     tab.id === "weekly_xp" ? `${compact(value)} XP` : tab.id === "level" ? `Level ${value}`
       : tab.id === "parallelism" ? `${value.toFixed(1)}×` : hours(value);
-  // Split bars share one scale so people can be compared by length.
-  const maxTotal = Math.max(1, ...shown.map((r) => (r.weeklyHumanSec ?? 0) + (r.weeklyAgentSec ?? 0)));
+  // On the agent-total boards, a second bar shows total agent hours (sub-agents counted separately).
+  const showTotal = tab.id === "agent_total" || tab.id === "parallelism";
+  // All bars share one scale so people can be compared by length.
+  const maxTotal = Math.max(1, ...shown.map((r) => Math.max(
+    (r.weeklyHumanSec ?? 0) + (r.weeklyAgentSec ?? 0),
+    showTotal ? (r.weeklyAgentWorkSec ?? 0) : 0,
+  )));
 
   return (
     <div style={{ maxWidth: 1040, margin: "0 auto" }}>
@@ -92,9 +97,15 @@ export default async function LeaderboardPage({ searchParams }: { searchParams: 
                 {r.weeklyHumanSec ? <span style={{ width: `${(r.weeklyHumanSec / maxTotal) * 100}%`, background: "var(--human)" }} /> : null}
                 {r.weeklyAgentSec ? <span style={{ width: `${(r.weeklyAgentSec / maxTotal) * 100}%`, background: "var(--agent)" }} /> : null}
               </span>
+              {showTotal && r.weeklyAgentWorkSec ? (
+                <span className="split-bar" aria-hidden>
+                  <span className="split-total" style={{ width: `${(r.weeklyAgentWorkSec / maxTotal) * 100}%` }} />
+                </span>
+              ) : null}
               <span className="split-nums num">
                 <span>Human {r.weeklyHumanSec === null ? "not shared" : hours(r.weeklyHumanSec)}</span>
                 <span>Agents {r.weeklyAgentSec === null ? "not shared" : hours(r.weeklyAgentSec)}</span>
+                {showTotal && r.weeklyAgentWorkSec !== null ? <span>Total agents {hours(r.weeklyAgentWorkSec)}</span> : null}
               </span>
             </span>
             <span className="board-score num">{score(r.value)}</span>

@@ -15,8 +15,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <header className="topbar">
         <Link href="/" className="brand"><BrandMark /><span>Arena</span></Link>
         <NavLinks />
-        <details className="account">
-          <summary aria-label="Account menu"><Avatar name={viewer.name} image={viewer.image} size={34} /></summary>
+        {/* Opens on hover, and on focus for keyboard and touch. */}
+        <div className="account">
+          <button type="button" className="account-trigger" aria-label="Account menu" aria-haspopup="menu">
+            <Avatar name={viewer.name} image={viewer.image} size={34} />
+          </button>
           <div className="account-menu">
             <Link href={`/u/${viewer.handle}`}>Your profile</Link>
             <Link href="/day">Your day</Link>
@@ -28,7 +31,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               <button type="submit">Sign out</button>
             </form>
           </div>
-        </details>
+        </div>
       </header>
       <main className="page">{children}</main>
     </>

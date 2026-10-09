@@ -44,6 +44,8 @@ export interface LeaderboardRow {
   /** This week's hours; null when the viewer can't see that category for this person. */
   weeklyHumanSec: number | null;
   weeklyAgentSec: number | null;
+  /** Total agent hours, sub-agents counted separately; null like weeklyAgentSec. */
+  weeklyAgentWorkSec: number | null;
   league: League | null;
   /** Marked away today. */
   away: boolean;
@@ -94,6 +96,7 @@ export async function leaderboard(tab: LeaderboardTab, viewer: Sharer, now: Date
       tabRank: rank,
       weeklyHumanSec: see.human ? item.weeklyHumanSec : null,
       weeklyAgentSec: see.agents ? item.weeklyAgentSec : null,
+      weeklyAgentWorkSec: see.agents ? item.weeklyAgentWorkSec : null,
       league: see.xp ? item.league : null,
       away: away.has(item.userId),
     };

@@ -160,6 +160,7 @@ describe.skipIf(!DB_URL)("sharing on the server", async () => {
     // The viewer doesn't share human or agents, so the split stays hidden.
     expect(ownerRow.weeklyHumanSec).toBeNull();
     expect(ownerRow.weeklyAgentSec).toBeNull();
+    expect(ownerRow.weeklyAgentWorkSec).toBeNull();
     expect(board.rows.some((r) => r.userId === hider.id)).toBe(true);
     const humanBoard = await leaderboard("human_hours", await user("humanfan", { ...none, human: true }));
     if (humanBoard.locked) throw new Error("board should be open");
