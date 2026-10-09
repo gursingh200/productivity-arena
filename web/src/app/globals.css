@@ -310,6 +310,23 @@ select.input { cursor: pointer; }
 .ach-rate span { display: block; height: 100%; border-radius: 2px; background: var(--text-2); }
 .ach-side { text-align: right; min-width: 140px; }
 .ach-side .num { font-size: 18px; }
+.vs-head { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+.vs-person { display: flex; gap: 14px; align-items: center; padding: 12px 18px 12px 12px; border-radius: var(--r-lg); background: var(--panel); border: 1px solid var(--line-soft); border-left: 4px solid; flex: 1 1 260px; }
+.vs-name { font-size: 20px; font-weight: 500; letter-spacing: -0.01em; }
+.vs-head .day-pick { margin-left: auto; }
+.vs-row { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 10px; align-items: baseline; padding: 9px 0; border-top: 1px solid var(--line-soft); }
+.vs-row:first-of-type { border-top: 0; }
+.vs-row > .num:last-child { text-align: right; }
+.vs-label { text-align: center; color: var(--text-2); font-size: 14px; }
+.vs-label small { display: block; font-size: 12px; }
+.vs-lead { color: var(--text); font-weight: 500; }
+td.vs-lead { color: var(--text); }
+.vs-score { display: grid; grid-template-columns: auto auto auto; justify-content: start; gap: 14px; align-items: baseline; font-size: 44px; font-weight: 500; letter-spacing: -0.03em; }
+.vs-score p { font-size: 13px; font-weight: 400; letter-spacing: normal; }
+.vs-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.vs-cols.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.vs-item { display: flex; justify-content: space-between; gap: 10px; padding: 7px 0; border-top: 1px solid var(--line-soft); font-size: 14px; }
+@media (max-width: 760px) { .vs-cols.three { grid-template-columns: 1fr; } .vs-head .day-pick { margin-left: 0; } }
 .update-banner { display: flex; gap: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 14px 16px 14px 20px; margin: 0 0 24px; border-radius: var(--r); background: color-mix(in srgb, var(--human) 14%, var(--panel)); border: 1px solid color-mix(in srgb, var(--human) 40%, transparent); color: var(--text-2); font-size: 14px; }
 .update-banner b { color: var(--text); font-weight: 500; }
 .notice-err { color: var(--danger); background: color-mix(in srgb, #e05a3a 14%, var(--panel)); }

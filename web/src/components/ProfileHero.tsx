@@ -19,6 +19,7 @@ export function ProfileHero({ data }: { data: ProfileData }) {
             <span>@{user.handle}</span>
             {user.guild ? <span className="guild"><i className="dot" style={{ background: user.guild.color }} />{user.guild.name}</span> : null}
             {user.bio ? <span>{user.bio}</span> : null}
+            {data.isOwner ? null : <Link href={`/compare?with=${user.handle}`} className="btn btn-sm btn-quiet">Compare with you</Link>}
           </div>
         </div>
       </div>
