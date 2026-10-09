@@ -71,9 +71,10 @@ struct HumanRecorderTests {
 
     @discardableResult
     func tick(_ recorder: HumanRecorder, _ iso: String, idle: Double = 1, app: FrontApp?, suspended: Bool = false,
-              title: String? = nil, privateApps: Set<String> = [], mic: MicApps.Reading = .none) throws -> HumanRecorder.Result {
+              title: String? = nil, privateApps: Set<String> = [], mic: MicApps.Reading = .none,
+              calendar: String? = nil) throws -> HumanRecorder.Result {
         try recorder.record(HumanRecorder.Tick(now: at(iso), idleSeconds: idle, app: app, windowTitle: title,
-                                               suspended: suspended, mic: mic),
+                                               suspended: suspended, mic: mic, calendarMeeting: calendar),
                             privateApps: privateApps)
     }
 
@@ -162,6 +163,42 @@ struct HumanRecorderTests {
         #expect(try box.store.meetingTotal(from: 0, to: minute("2026-10-05T11:00:00Z")) == 115)
         #expect(try !box.store.isActive(minute("2026-10-05T10:00:00Z")))
         #expect(try box.store.appSeconds(t: minute("2026-10-05T10:00:00Z")).isEmpty)  // idle, so no app share
+    }
+
+    @Test func calendarMeetingsCountUnlessACallAppHasTheMic() throws {
+        let box = try Sandbox()
+        let recorder = HumanRecorder(store: box.store)
+        try tick(recorder, "2026-10-05T10:00:00Z", app: safari, calendar: "Design review")
+        #expect(try tick(recorder, "2026-10-05T10:00:05Z", app: safari, calendar: "Design review").meetingSeconds == 5)
+        // A call app takes the minute's credit instead.
+        _ = try tick(recorder, "2026-10-05T10:00:10Z", app: safari, mic: MicApps.Reading(dictating: false, meeting: zoom), calendar: "Design review")
+        let rows = try box.store.meetingSeconds(t: minute("2026-10-05T10:00:00Z"))
+        #expect(Set(rows.map(\.bundleId)) == ["calendar", "us.zoom.xos"])
+        // Locked or asleep: nothing.
+        #expect(try tick(recorder, "2026-10-05T10:00:15Z", app: safari, suspended: true, calendar: "Design review").meetingSeconds == 0)
+    }
+
+    @Test func calendarTitlesStayOnThisMac() throws {
+        let box = try Sandbox()
+        let recorder = HumanRecorder(store: box.store)
+        try tick(recorder, "2026-10-05T10:00:00Z", app: safari, calendar: "Secret acquisition talks")
+        try tick(recorder, "2026-10-05T10:00:05Z", app: safari, calendar: "Secret acquisition talks")
+        let built = try PayloadBuilder.build(store: box.store, device: DeviceInfo(id: "d", name: "Mac", os: "macOS", agentVersion: "0"))
+        let json = String(decoding: try JSONEncoder().encode(built.payload), as: UTF8.self)
+        #expect(json.contains("Calendar meeting"))
+        #expect(!json.contains("Secret acquisition"))
+    }
+
+    @Test func calendarRulesSkipWhatIsntAMeeting() {
+        let now = at("2026-10-05T10:30:00Z")
+        func event(_ title: String, allDay: Bool = false, free: Bool = false, others: Int = 2, declined: Bool = false) -> CalendarRules.Event {
+            CalendarRules.Event(title: title, start: at("2026-10-05T10:00:00Z"), end: at("2026-10-05T11:00:00Z"), isAllDay: allDay,
+                                isFree: free, isCancelled: false, otherAttendees: others, youDeclined: declined)
+        }
+        #expect(CalendarRules.current([event("Standup")], at: now)?.title == "Standup")
+        for skipped in [event("Holiday", allDay: true), event("Focus", free: true), event("Solo", others: 0), event("Nope", declined: true)] {
+            #expect(CalendarRules.current([skipped], at: now) == nil)
+        }
     }
 
     @Test func privateMeetingAppsAreAnonymous() throws {

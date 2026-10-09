@@ -59,6 +59,8 @@ cat > "$CONTENTS_DIR/Info.plist" << PLIST
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+    <key>NSCalendarsFullAccessUsageDescription</key>
+    <string>Arena counts your calendar meetings as meeting time while you use your Mac. Event details stay on this Mac.</string>
     <key>CFBundleIconFile</key>
     <string>AppIcon</string>
     <key>CFBundleIdentifier</key>
@@ -130,10 +132,10 @@ if [ -z "$IDENTITY" ] && security find-identity -p codesigning | grep -q '"Arena
 fi
 if [ -n "$IDENTITY" ]; then
   echo "Code signing with \"$IDENTITY\"..."
-  codesign --force --sign "$IDENTITY" --options runtime "$APP_DIR"
+  codesign --force --sign "$IDENTITY" --options runtime --entitlements "$MAC_DIR/Resources/Arena.entitlements" "$APP_DIR"
 else
   echo "Code signing (ad-hoc). Run scripts/setup-signing.sh once to stop Keychain prompts after rebuilds."
-  codesign --force --sign - --options runtime "$APP_DIR"
+  codesign --force --sign - --options runtime --entitlements "$MAC_DIR/Resources/Arena.entitlements" "$APP_DIR"
 fi
 
 echo ""

@@ -5,6 +5,8 @@ public struct ArenaSettings: Equatable {
     public var serverURL: URL?
     public var privateApps: Set<String> = []
     public var windowTitlesEnabled = false
+    /// Count calendar meetings (macOS Calendar) as meeting time while the Mac is in use.
+    public var calendarEnabled = false
     /// Tracking is paused until this instant (`.distantFuture` = until resumed).
     public var pausedUntil: Date?
     public var deviceId: String = UUID().uuidString
@@ -19,7 +21,7 @@ public struct ArenaSettings: Equatable {
     }
 
     static let keys = (server: "settings.server", privateApps: "settings.privateApps",
-                       titles: "settings.windowTitles", paused: "settings.pausedUntil", device: "settings.deviceId",
+                       titles: "settings.windowTitles", calendar: "settings.calendar", paused: "settings.pausedUntil", device: "settings.deviceId",
                        history: "settings.historyKeepDays")
 
     public static func load(from store: Store) throws -> ArenaSettings {
@@ -29,6 +31,7 @@ public struct ArenaSettings: Equatable {
             settings.privateApps = Set(apps)
         }
         settings.windowTitlesEnabled = try store.value(keys.titles) == "1"
+        settings.calendarEnabled = try store.value(keys.calendar) == "1"
         settings.pausedUntil = try store.value(keys.paused).flatMap(Double.init).map(Date.init(timeIntervalSince1970:))
         settings.historyKeepDays = try store.value(keys.history).flatMap { Int($0) }
         if let device = try store.value(keys.device) {
@@ -44,6 +47,7 @@ public struct ArenaSettings: Equatable {
         let apps = String(decoding: try JSONEncoder().encode(privateApps.sorted()), as: UTF8.self)
         try store.setValue(apps, for: Self.keys.privateApps)
         try store.setValue(windowTitlesEnabled ? "1" : "0", for: Self.keys.titles)
+        try store.setValue(calendarEnabled ? "1" : "0", for: Self.keys.calendar)
         try store.setValue(pausedUntil.map { String($0.timeIntervalSince1970) }, for: Self.keys.paused)
         try store.setValue(deviceId, for: Self.keys.device)
         try store.setValue(historyKeepDays.map(String.init), for: Self.keys.history)

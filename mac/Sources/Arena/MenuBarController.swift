@@ -8,6 +8,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
 
     var onPair: ((String) -> Void)?
     var onConnectInBrowser: (() -> Void)?
+    var onToggleCalendar: (() -> Void)?
     var onConnectLinear: ((String) -> Void)?
     var onDisconnectLinear: (() -> Void)?
     var onQuestResponse: ((String, Bool) -> Void)?
@@ -184,6 +185,9 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         }
         titles.state = settings.windowTitlesEnabled ? .on : .off
         sub.addItem(titles)
+        let calendarItem = action("Count Calendar Meetings") { [weak self] in self?.onToggleCalendar?() }
+        calendarItem.state = settings.calendarEnabled ? .on : .off
+        sub.addItem(calendarItem)
         sub.addItem(.separator())
         sub.addItem(historyMenu(settings))
         sub.addItem(deleteOlderMenu())

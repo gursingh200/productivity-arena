@@ -48,15 +48,18 @@ public final class HumanRecorder {
         public var windowTitle: String?
         public var suspended: Bool  // paused, locked, asleep
         public var mic: MicApps.Reading
+        /// Title of the calendar meeting happening now, if counting calendar meetings is on.
+        public var calendarMeeting: String?
 
         public init(now: Date, idleSeconds: TimeInterval, app: FrontApp?, windowTitle: String?, suspended: Bool,
-                    mic: MicApps.Reading = .none) {
+                    mic: MicApps.Reading = .none, calendarMeeting: String? = nil) {
             self.now = now
             self.idleSeconds = idleSeconds
             self.app = app
             self.windowTitle = windowTitle
             self.suspended = suspended
             self.mic = mic
+            self.calendarMeeting = calendarMeeting
         }
     }
 
@@ -102,8 +105,10 @@ public final class HumanRecorder {
             result.appSeconds = seconds
         }
 
-        // Meeting time.
-        if let meeting = tick.mic.meeting {
+        // Meeting time: a call app holding the mic, else a calendar meeting while
+        // the Mac is awake and unlocked (an in-person meeting with the laptop open).
+        let calendar = tick.calendarMeeting.map { MicApp(bundleId: Self.calendarBundleId, name: $0, use: .call) }
+        if let meeting = tick.mic.meeting ?? calendar {
             if meetingThisMinute.t != t {
                 meetingThisMinute = (t, try store.meetingSeconds(t: t).reduce(0) { $0 + $1.sec })
             }
@@ -118,6 +123,10 @@ public final class HumanRecorder {
         }
         return result
     }
+
+    /// Meeting time from the calendar is stored under this id; the event title
+    /// stays on this Mac (uploads say "Calendar meeting").
+    public static let calendarBundleId = "calendar"
 
     /// Forget the previous tick, e.g. after wake, so the gap isn't credited.
     public func reset() {

@@ -43,6 +43,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let frontApp = FrontAppSensor()
     private let power = PowerEvents()
     private let processScanner = ProcessScanner()
+    private let calendar = CalendarSensor()
     private var fileWatcher: FileWatcher?
     private var timers: [Timer] = []
 
@@ -70,6 +71,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menuBar.onConnectInBrowser = { [weak self] in self?.connectInBrowser() }
         menuBar.onConnectLinear = { [weak self] key in self?.connectLinear(key) }
         menuBar.onDisconnectLinear = { [weak self] in self?.disconnectLinear() }
+        menuBar.onToggleCalendar = { [weak self] in self?.toggleCalendar() }
         engine.linearKey = Keychain.loadLinearKey()
         menuBar.onOpenActivity = { [weak self] in self?.openActivity(range: nil) }
         menuBar.onQuestResponse = { [weak self] id, accept in
@@ -156,7 +158,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         engine.tick(now: Date(), idleSeconds: IdleSensor.secondsSinceLastInput(), app: frontApp.current,
                     windowTitle: titlesOn ? WindowTitleSensor.focusedWindowTitle() : nil,
                     locked: power.isSuspended, micCapturing: MicSensor.capturingBundleIds(),
-                    audioPlaying: MicSensor.outputtingBundleIds())
+                    audioPlaying: MicSensor.outputtingBundleIds(),
+                    calendarMeeting: engine.currentSettings().calendarEnabled ? calendar.currentMeeting() : nil)
     }
 
     private func uploadSoon() {
@@ -165,6 +168,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func syncLinearSoon() {
         Task { try? await engine.syncLinear() }
+    }
+
+    // MARK: - Calendar
+
+    /// Counting calendar meetings needs Calendar access, asked for the first time it's turned on.
+    private func toggleCalendar() {
+        if engine.currentSettings().calendarEnabled {
+            engine.updateSettings { $0.calendarEnabled = false }
+            return
+        }
+        calendar.requestAccess { [weak self] granted in
+            guard let self else { return }
+            if granted {
+                self.engine.updateSettings { $0.calendarEnabled = true }
+                self.menuBar.showMessage("Calendar meetings now count while your Mac is awake and unlocked. Add your Google account in System Settings → Internet Accounts if it isn’t in Calendar yet. Event names stay on this Mac.")
+            } else {
+                self.menuBar.showMessage("Arena can’t read your calendar. Allow it in System Settings → Privacy & Security → Calendars, then try again.")
+            }
+        }
     }
 
     // MARK: - Linear

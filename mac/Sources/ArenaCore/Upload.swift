@@ -25,7 +25,12 @@ public enum PayloadBuilder {
         var minutePayloads: [MinutePayload] = []
         for t in minutes {
             let apps = try store.isActive(t) ? normalized(try store.appSeconds(t: t).map(entry)) : []
-            let meetings = capped(try store.meetingSeconds(t: t).map(entry))
+            let meetings = capped(try store.meetingSeconds(t: t).map(entry).map { m in
+                // Calendar event titles never leave this Mac.
+                var m = m
+                if m.id == HumanRecorder.calendarBundleId { m.name = "Calendar meeting" }
+                return m
+            })
             minutePayloads.append(MinutePayload(t: formatISO(dateOfMinute(t)), apps: apps,
                                                 agents: try store.agentEntries(t: t),
                                                 meetings: meetings.isEmpty ? nil : meetings))

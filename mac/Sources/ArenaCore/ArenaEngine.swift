@@ -133,12 +133,13 @@ public final class ArenaEngine: @unchecked Sendable {
 
     /// - Parameter micCapturing: bundle ids of processes capturing the microphone right now.
     public func tick(now: Date, idleSeconds: TimeInterval, app: FrontApp?, windowTitle: String?, locked: Bool,
-                     micCapturing: [String] = [], audioPlaying: [String] = []) {
+                     micCapturing: [String] = [], audioPlaying: [String] = [], calendarMeeting: String? = nil) {
         queue.async { [self] in
             let suspended = locked || settings.isPaused(at: now)
             let title = settings.windowTitlesEnabled ? windowTitle : nil
             let tick = HumanRecorder.Tick(now: now, idleSeconds: idleSeconds, app: app, windowTitle: title, suspended: suspended,
-                                          mic: MicApps.classify(micCapturing, outputtingBundleIds: audioPlaying))
+                                          mic: MicApps.classify(micCapturing, outputtingBundleIds: audioPlaying),
+                                          calendarMeeting: settings.calendarEnabled ? calendarMeeting : nil)
             log { try human.record(tick, privateApps: settings.privateApps) }
             updateSummary(now: now)
         }
