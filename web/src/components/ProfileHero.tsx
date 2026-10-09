@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { TapBadge } from "./EasterEggs";
 import type { ProfileData } from "@/lib/profile";
 import { Avatar } from "./Avatar";
 import { LeagueEmblem } from "./LeagueEmblem";
@@ -31,7 +32,7 @@ export function ProfileHero({ data }: { data: ProfileData }) {
             </div>
           </div>
           <div className="badge">
-            <LeagueEmblem league={xp.league} size={40} />
+            {data.isOwner ? <TapBadge><LeagueEmblem league={xp.league} size={40} /></TapBadge> : <LeagueEmblem league={xp.league} size={40} />}
             <div>
               <div className="badge-label"><Link href="/xp#leagues">{LEAGUE_NAMES[xp.league]} league</Link></div>
               <div className="badge-value num">

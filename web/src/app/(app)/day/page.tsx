@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { agentName, duration } from "@/components/format";
 import { HourChart } from "@/components/TimeCharts";
+import { recordEvent } from "@/lib/achievements";
 import { loadDay, pickDay } from "@/lib/day-view";
 import { addDays } from "@/lib/timezone";
 import { requireViewer } from "@/lib/viewer";
@@ -18,6 +19,7 @@ export default async function DayPage({ searchParams }: { searchParams: Promise<
   const viewer = await requireViewer();
   const day = pickDay((await searchParams).d, viewer);
   const v = await loadDay(viewer, day);
+  if (day <= addDays(v.today, -14)) await recordEvent(viewer.id, "rewind"); // a secret achievement
   const prev = addDays(day, -1);
   const next = addDays(day, 1);
   const hasPrev = prev >= v.firstDay;

@@ -7,6 +7,7 @@ const LINKS = [
   { href: "/", label: "Home" },
   { href: "/leaderboard", label: "Leaderboard" },
   { href: "/quests", label: "Quests" },
+  { href: "/achievements", label: "Achievements" },
   { href: "/xp", label: "XP" },
   { href: "/download", label: "Download" },
   { href: "/bugs", label: "Report a bug" },

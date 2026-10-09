@@ -4,12 +4,15 @@ import { signOut } from "@/auth";
 import { Avatar } from "@/components/Avatar";
 import { BrandMark } from "@/components/BrandMark";
 import { NavLinks } from "@/components/NavLinks";
+import { EasterEggs } from "@/components/EasterEggs";
+import { checkInsomniac } from "@/lib/achievements";
 import { requireViewer } from "@/lib/viewer";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const viewer = await requireViewer();
   // Everyone picks their sharing on first sign-in before seeing anything else.
   if (!viewer.onboardedAt) redirect("/welcome");
+  await checkInsomniac(viewer.id, viewer.timezone);
   return (
     <>
       <header className="topbar">
@@ -33,7 +36,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </div>
         </div>
       </header>
-      <main className="page">{children}</main>
+      <main className="page"><EasterEggs>{children}</EasterEggs></main>
     </>
   );
 }

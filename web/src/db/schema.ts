@@ -392,6 +392,31 @@ export const awayDays = pgTable(
   (table) => [primaryKey({ columns: [table.userId, table.day] }), index("away_days_day_idx").on(table.day)]
 );
 
+// ─── Achievements ─────────────────────────────────────────────────────────────
+
+/** When each person unlocked each achievement (ids in lib/achievements.ts). Saved once, kept for good. */
+export const userAchievements = pgTable(
+  "user_achievements",
+  {
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    achievementId: text("achievement_id").notNull(),
+    unlockedAt: timestamp("unlocked_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.achievementId] }), index("user_achievements_id_idx").on(table.achievementId)]
+);
+
+/** Things people did on the site that some achievements count (e.g. whom they compared with). */
+export const achievementEvents = pgTable(
+  "achievement_events",
+  {
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    kind: text("kind").notNull(),
+    detail: text("detail").notNull().default(""),
+    at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.kind, table.detail] })]
+);
+
 // ─── Bug reports ──────────────────────────────────────────────────────────────
 
 export const bugReports = pgTable(
