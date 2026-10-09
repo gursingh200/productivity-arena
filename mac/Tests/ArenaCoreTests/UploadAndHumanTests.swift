@@ -382,6 +382,51 @@ struct ResendTests {
         #expect(try box.store.dirtyMinutes(limit: 100) == [recent, call])
         #expect(try box.store.dirtyChats(limit: 100).map { "\($0.agent)/\($0.session)" } == ["claude/s1"])
     }
+
+    func engine(_ box: Sandbox, token: String?) throws -> ArenaEngine {
+        try ArenaEngine(store: box.store, paths: box.paths, token: token,
+                        device: { DeviceInfo(id: $0, name: "Test Mac", os: "macOS 26.0", agentVersion: "0.1.0") })
+    }
+
+    @Test func pairingResendsTheLastWeekAndMarksItAsAResend() throws {
+        let box = try Sandbox()
+        let sixDays = minuteOf(testNow.addingTimeInterval(-6 * 86_400))
+        let eightDays = minuteOf(testNow.addingTimeInterval(-8 * 86_400))
+        try box.store.addAppSeconds(t: sixDays, bundleId: "com.apple.Safari", appName: "Safari", sec: 30)
+        try box.store.addAppSeconds(t: eightDays, bundleId: "com.apple.Safari", appName: "Safari", sec: 30)
+        try box.store.clearDirtyMinutes(try box.store.dirtyMinutes(limit: 100))
+
+        try engine(box, token: "t").resendRecentHistory(now: testNow)
+
+        #expect(try box.store.dirtyMinutes(limit: 100) == [sixDays])
+        #expect(try box.store.value(ArenaEngine.resendPendingKey) == "1")
+        #expect(try box.store.value(ArenaEngine.weekResentKey) == "1")
+    }
+
+    @Test func resendsOnceAfterUpdatingOnlyWhenPaired() throws {
+        let box = try Sandbox()
+        let recent = minuteOf(testNow.addingTimeInterval(-3 * 86_400))
+        try box.store.addAppSeconds(t: recent, bundleId: "com.apple.Safari", appName: "Safari", sec: 30)
+        try box.store.clearDirtyMinutes(try box.store.dirtyMinutes(limit: 100))
+
+        try engine(box, token: nil).resendOnceAfterUpdate(now: testNow) // not paired: nothing
+        #expect(try box.store.dirtyMinutes(limit: 100).isEmpty)
+
+        try engine(box, token: "t").resendOnceAfterUpdate(now: testNow)
+        #expect(try box.store.dirtyMinutes(limit: 100) == [recent])
+
+        try box.store.clearDirtyMinutes([recent])
+        try engine(box, token: "t").resendOnceAfterUpdate(now: testNow) // already done
+        #expect(try box.store.dirtyMinutes(limit: 100).isEmpty)
+    }
+
+    @Test func theResendFlagIsOnlySentWhenSet() throws {
+        let device = DeviceInfo(id: "d", name: "Mac", os: "macOS", agentVersion: "1", timezone: nil)
+        let plain = String(decoding: try JSONEncoder().encode(IngestPayload(device: device, minutes: [], chats: nil)), as: UTF8.self)
+        let resend = String(decoding: try JSONEncoder().encode(IngestPayload(device: device, minutes: [], chats: nil, resend: true)), as: UTF8.self)
+        #expect(!plain.contains("resend"))
+        #expect(resend.contains("\"resend\":true"))
+    }
 }
 
 struct MenuQuestTests {

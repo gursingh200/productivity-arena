@@ -113,6 +113,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         fileWatcher = watcher
 
         engine.scanEverything()
+        // Paired before week-long resends existed: send the last week again, once.
+        engine.resendOnceAfterUpdate()
         startTimers()
         uploadSoon()
 

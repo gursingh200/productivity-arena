@@ -196,13 +196,17 @@ public struct IngestPayload: Codable, Equatable {
     public var chats: [ChatPayload]?
     /// Chat ids the server should delete (sub-agent chats merged into their parent).
     public var deletedChats: [String]?
+    /// Part of a resend of the last week (after pairing, or once after updating):
+    /// the server lets it replace this Mac's minutes up to a week old. Nil otherwise.
+    public var resend: Bool?
 
-    public init(device: DeviceInfo, minutes: [MinutePayload], chats: [ChatPayload]?, deletedChats: [String]? = nil) {
+    public init(device: DeviceInfo, minutes: [MinutePayload], chats: [ChatPayload]?, deletedChats: [String]? = nil, resend: Bool? = nil) {
         self.schema = 1
         self.device = device
         self.minutes = minutes
         self.chats = chats
         self.deletedChats = deletedChats
+        self.resend = resend
     }
 }
 

@@ -56,14 +56,29 @@ public final class ArenaEngine: @unchecked Sendable {
         updateSummary(now: Date())
     }
 
-    /// How much history a newly paired server gets.
-    public static let resendOnPairing: TimeInterval = 24 * 3600
+    /// How much history a newly paired server gets (it ignores anything before its start date).
+    public static let resendOnPairing: TimeInterval = 7 * 86_400
+    /// Set while a resend is still uploading, so it survives a restart.
+    static let resendPendingKey = "resend.pending"
+    /// Set once this Mac has resent its last week (after pairing, or once after updating).
+    static let weekResentKey = "resend.weekDone"
 
-    /// Queues the last 24 hours to be uploaded again. Called after pairing, so a
-    /// new server (or a new pairing with the same one) gets today's full picture;
-    /// the server replaces what an earlier pairing of this Mac sent.
+    /// Queues the last week to be uploaded again, marked as a resend so the
+    /// server replaces what this Mac sent before. Called after pairing, so a new
+    /// server (or a new pairing with the same one) gets the full picture.
     public func resendRecentHistory(now: Date = Date()) {
-        queue.sync { log { try store.markForResend(since: minuteOf(now.addingTimeInterval(-Self.resendOnPairing))) } }
+        queue.sync {
+            log { try store.markForResend(since: minuteOf(now.addingTimeInterval(-Self.resendOnPairing))) }
+            log { try store.setValue("1", for: Self.resendPendingKey) }
+            log { try store.setValue("1", for: Self.weekResentKey) }
+        }
+    }
+
+    /// Macs paired before the week-long resend existed resend their last week
+    /// once, after updating. Does nothing when not paired or already done.
+    public func resendOnceAfterUpdate(now: Date = Date()) {
+        let due: Bool = queue.sync { client.token != nil && (try? store.value(Self.weekResentKey)) == nil }
+        if due { resendRecentHistory(now: now) }
     }
 
     // MARK: - Agent logs
@@ -245,12 +260,16 @@ public final class ArenaEngine: @unchecked Sendable {
         defer { queue.sync { uploading = false } }
 
         while true {
-            guard let built = queue.sync(execute: { try? PayloadBuilder.build(store: store, device: device) }) else { return }
+            guard var built = queue.sync(execute: { try? PayloadBuilder.build(store: store, device: device) }) else { return }
+            let resending = queue.sync { (try? store.value(Self.resendPendingKey)) == "1" }
             if built.isEmpty {
+                // Everything queued has been sent: the resend is done.
+                if resending { queue.sync { log { try store.setValue(nil, for: Self.resendPendingKey) } } }
                 let due = queue.sync { Date().timeIntervalSince(lastStatusAt) >= Self.idleStatusInterval }
                 if due { await refreshStatus() }
                 return
             }
+            if resending { built.payload.resend = true }
             do {
                 let response = try await client.ingest(built.payload)
                 queue.sync {

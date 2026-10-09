@@ -15,6 +15,15 @@ export interface Release {
 export const CHANGELOG: Release[] = [
   {
     date: "2026-10-09",
+    title: "Your last week, filled in",
+    mac: "0.1.19",
+    changes: [
+      "Connecting a Mac, for the first time or again, sends its last week of history (from October 5 at the earliest), so nothing it tracked while disconnected is lost.",
+      "Macs already connected send their last week once after this update, filling in anything missing, including agent hours.",
+    ],
+  },
+  {
+    date: "2026-10-09",
     title: "Easier to find Compare, quests in the menu bar",
     mac: "0.1.18",
     changes: [
