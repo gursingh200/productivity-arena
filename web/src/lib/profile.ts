@@ -14,7 +14,8 @@ import { type League } from "@/lib/leagues";
 import { computeLevel, type LevelInfo } from "@/lib/levels";
 import { questsForUser } from "@/lib/quest-db";
 import { CATEGORIES, hiddenReason, SKILL_SOURCES, visibility, xpRowCategory, type Category, type Visibility } from "@/lib/sharing";
-import { computeSkillsRadar, type SkillsRadar } from "@/lib/skills";
+import { type SkillsRadar } from "@/lib/skills";
+import { allSkillScores, emptyScores, type SkillScores } from "@/lib/skills-db";
 import { rankBy, weekDays, weeklyStandings, type Standing } from "@/lib/standings";
 import { addDays, dayBounds, toUserDay } from "@/lib/timezone";
 
@@ -100,7 +101,8 @@ export interface ProfileData {
   /** Apps (last 30 days). Call apps also need meetings to be visible. */
   apps: { top: AppTotal[]; calls: AppTotal[] | null } | null;
   /** Each axis is null when the viewer can't see a category it's computed from. */
-  skills: Record<keyof SkillsRadar, number | null> | null;
+  /** Scores on each scale; an axis is null when the viewer can't see what it's computed from. */
+  skills: { absolute: SkillScoresView; team: SkillScoresView; guild: SkillScoresView | null } | null;
 }
 
 export async function loadProfile(handle: string, viewer: User, now = new Date()): Promise<ProfileData | null> {
@@ -207,12 +209,22 @@ export async function loadProfile(handle: string, viewer: User, now = new Date()
       },
     } : null,
     apps: visible.apps ? appsSection(recent30, visible.meetings) : null,
-    skills: visible.skills ? visibleSkills(await skillsFor(user.id, user.guildId, recent30, totalsFor(start30, 30), range30, agentTotals), visible) : null,
+    skills: visible.skills ? scaledSkills((await allSkillScores()).get(user.id) ?? emptyScores(), visible) : null,
   };
 }
 
-function visibleSkills(skills: SkillsRadar, visible: Visibility): NonNullable<ProfileData["skills"]> {
-  const out = {} as NonNullable<ProfileData["skills"]>;
+export type SkillScoresView = Record<keyof SkillsRadar, number | null>;
+
+export function scaledSkills(scores: SkillScores, visible: Visibility): NonNullable<ProfileData["skills"]> {
+  return {
+    absolute: visibleSkills(scores.absolute, visible),
+    team: visibleSkills(scores.team, visible),
+    guild: scores.guild ? visibleSkills(scores.guild, visible) : null,
+  };
+}
+
+function visibleSkills(skills: SkillsRadar, visible: Visibility): SkillScoresView {
+  const out = {} as SkillScoresView;
   for (const axis of Object.keys(skills) as Array<keyof SkillsRadar>) {
     out[axis] = SKILL_SOURCES[axis].every((c) => visible[c]) ? skills[axis] : null;
   }
@@ -269,55 +281,6 @@ function appsSection(recent30: Array<typeof dailyRollup.$inferSelect>, withCalls
   return { top: totals("topApps", 8), calls: withCalls ? totals("meetingApps", 5) : null };
 }
 
-async function skillsFor(
-  userId: string,
-  guildId: string | null,
-  recent30: Array<typeof dailyRollup.$inferSelect>,
-  days30: DayTotals[],
-  range: { start: Date; end: Date },
-  agents: Map<string, AgentTotals>,
-): Promise<SkillsRadar> {
-  const weekdays = days30.filter((d) => {
-    const dow = new Date(`${d.day}T12:00:00Z`).getUTCDay();
-    return dow !== 0 && dow !== 6;
-  }).length;
-
-  const resolved = await db.select({ state: quests.state, n: sql<number>`COUNT(*)` }).from(quests)
-    .where(and(eq(quests.userId, userId), gte(quests.createdAt, range.start))).groupBy(quests.state);
-  const count = (states: string[]) => resolved.filter((r) => states.includes(r.state)).reduce((s, r) => s + Number(r.n), 0);
-
-  const [linear] = await db.select({ n: sql<number>`COUNT(*)` }).from(linearIssues)
-    .where(and(eq(linearIssues.userId, userId), gte(linearIssues.completedAt, range.start)));
-
-  let guildShare = 0;
-  let guildSize = 0;
-  if (guildId) {
-    const members = await db.select({ id: users.id }).from(users).where(eq(users.guildId, guildId));
-    guildSize = members.length;
-    const [guildTotal] = await db.select({ sec: sql<number>`COALESCE(SUM(${dailyRollup.agentSec} + ${dailyRollup.humanSec}), 0)` })
-      .from(dailyRollup)
-      .where(and(inArray(dailyRollup.userId, members.map((m) => m.id)), gte(dailyRollup.day, days30[0]!.day)));
-    const mine = recent30.reduce((s, r) => s + r.agentSec + r.humanSec, 0);
-    guildShare = Number(guildTotal?.sec) > 0 ? mine / Number(guildTotal!.sec) : 0;
-  }
-
-  return computeSkillsRadar({
-    // Skills measure focus time: human plus call time.
-    dailyRollups: recent30.map((r) => ({
-      day: r.day, humanSec: r.humanSec + r.meetingSec, agentSec: r.agentSec, longestFocusSec: r.longestFocusSec,
-      focusBlocks: r.focusBlocks, peakParallel: r.peakParallel, tokensOut: r.tokensOut,
-    })),
-    weekdays,
-    questsOffered: count(["completed", "failed", "expired", "declined", "active", "offered"]),
-    questsCompleted: count(["completed"]),
-    linearIssuesPerWeek: Number(linear?.n ?? 0) / (30 / 7),
-    guildContributionShare: guildShare,
-    guildSize,
-    totalOutputTokens: [...agents.values()].reduce((s, a) => s + a.tokensOut, 0),
-    totalAgentSec: [...agents.values()].reduce((s, a) => s + a.agentSec, 0),
-  });
-}
-
 /** Daily totals from the first day with data (or the start date) to today, a year at most. */
 async function historyFor(userId: string, today: string, visible: Visibility): Promise<DayTotals[]> {
   const yearAgo = addDays(today, -364);
@@ -338,3 +301,4 @@ async function historyFor(userId: string, today: string, visible: Visibility): P
   }
   return out;
 }
+

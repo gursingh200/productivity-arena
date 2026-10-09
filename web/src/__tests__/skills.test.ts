@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeSkillsRadar } from '../lib/skills';
+import { computeSkillMeasures, computeSkillsRadar, percentileScore } from '../lib/skills';
 import type { SkillsInput, DailyRollup } from '../lib/skills';
 
 // ---------------------------------------------------------------------------
@@ -23,7 +23,7 @@ const zeroInput: SkillsInput = {
   weekdays: 20,
   questsOffered: 0,
   questsCompleted: 0,
-  linearIssuesPerWeek: 0,
+  totalAgentWorkSec: 0,
   guildContributionShare: 0,
   guildSize: 1,
   totalOutputTokens: 0,
@@ -51,8 +51,8 @@ describe('computeSkillsRadar — zero data', () => {
     expect(computeSkillsRadar(zeroInput).orchestration).toBe(0);
   });
 
-  it('velocity is 0 with no Linear issues', () => {
-    expect(computeSkillsRadar(zeroInput).velocity).toBe(0);
+  it('parallelism is 0 with no agent time', () => {
+    expect(computeSkillsRadar(zeroInput).parallelism).toBe(0);
   });
 
   it('competitive defaults to 5 when no quests offered', () => {
@@ -218,20 +218,35 @@ describe('computeSkillsRadar — orchestration', () => {
 });
 
 // ---------------------------------------------------------------------------
-// velocity
+// parallelism
 // ---------------------------------------------------------------------------
 
-describe('computeSkillsRadar — velocity', () => {
-  it('10 issues/week => 10', () => {
-    expect(computeSkillsRadar({ ...zeroInput, linearIssuesPerWeek: 10 }).velocity).toBe(10);
+describe('computeSkillsRadar — parallelism', () => {
+  const agents = (clockH: number, totalH: number) =>
+    computeSkillsRadar({ ...zeroInput, totalAgentSec: clockH * 3600, totalAgentWorkSec: totalH * 3600 }).parallelism;
+
+  it('one thing at a time (1×) => 0', () => expect(agents(10, 10)).toBe(0));
+  it('2× => 5', () => expect(agents(10, 20)).toBeCloseTo(5, 5));
+  it('3× and above => 10', () => expect(agents(10, 50)).toBe(10));
+  it('total below clock time counts as 1×', () => expect(agents(10, 5)).toBe(0));
+});
+
+describe('percentileScore', () => {
+  it('top of the group is 10, bottom is 0, ties count half', () => {
+    expect(percentileScore(9, [1, 5, 9])).toBe(10);
+    expect(percentileScore(1, [1, 5, 9])).toBe(0);
+    expect(percentileScore(5, [1, 5, 9])).toBe(5);
+    expect(percentileScore(5, [5, 5, 5])).toBe(5);
   });
 
-  it('5 issues/week => 5', () => {
-    expect(computeSkillsRadar({ ...zeroInput, linearIssuesPerWeek: 5 }).velocity).toBeCloseTo(5, 5);
+  it('alone: 10 if you have any, else 0', () => {
+    expect(percentileScore(3, [3])).toBe(10);
+    expect(percentileScore(0, [0])).toBe(0);
   });
 
-  it('capped at 10 for > 10 issues/week', () => {
-    expect(computeSkillsRadar({ ...zeroInput, linearIssuesPerWeek: 20 }).velocity).toBe(10);
+  it('measures keep their order above the absolute cap', () => {
+    const big = computeSkillMeasures({ ...zeroInput, totalAgentSec: 10 * 3600, totalAgentWorkSec: 60 * 3600 }).parallelism;
+    expect(big).toBeGreaterThan(10);
   });
 });
 
@@ -364,7 +379,7 @@ describe('computeSkillsRadar — boundary', () => {
       weekdays: 22,
       questsOffered: 15,
       questsCompleted: 12,
-      linearIssuesPerWeek: 8,
+      totalAgentWorkSec: 80 * 3600,
       guildContributionShare: 0.1,
       guildSize: 10,
       totalOutputTokens: 500_000,

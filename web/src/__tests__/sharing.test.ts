@@ -116,11 +116,14 @@ describe.skipIf(!DB_URL)("sharing on the server", async () => {
   it("hides skills axes computed from categories the viewer can't see", async () => {
     const viewer = await user("skillsonly", { ...none, skills: true });
     const skills = (await loadProfile(owner.handle!, viewer))!.skills!;
-    expect(skills.orchestration).toBeNull();
-    expect(skills.intensity).toBeNull();
-    expect(skills.endurance).toBeNull();
-    expect(skills.camaraderie).toBeNull();
-    expect(skills.velocity).not.toBeNull();
+    // Every scale hides the same axes: a team rank gives away as much as the score.
+    for (const scale of [skills.absolute, skills.team, ...(skills.guild ? [skills.guild] : [])]) {
+      expect(scale.orchestration).toBeNull();
+      expect(scale.intensity).toBeNull();
+      expect(scale.endurance).toBeNull();
+      expect(scale.camaraderie).toBeNull();
+      expect(scale.parallelism).toBeNull();
+    }
   });
 
   it("hides a category the owner doesn't share even from a viewer who does", async () => {

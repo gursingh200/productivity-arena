@@ -10,7 +10,7 @@ import { AppsPanel } from "./AppsPanel";
 import { Heatmap, HeatScale } from "./Heatmap";
 import { ProfileHero } from "./ProfileHero";
 import { QuestList } from "./QuestList";
-import { Radar, SkillList } from "./Radar";
+import { SkillsPanel } from "./SkillsPanel";
 import { Scoreboard } from "./Scoreboard";
 import { XpLog } from "./XpLog";
 import { change, hours } from "./format";
@@ -87,12 +87,7 @@ export function ProfileView({ data }: { data: ProfileData }) {
         </div>
 
         <Panel title="Skills" note="Last 30 days, each scored out of 10" className="c12">
-          {data.skills ? (
-            <div className="skills">
-              <Radar skills={data.skills} />
-              <SkillList skills={data.skills} />
-            </div>
-          ) : hiddenNote("skills")}
+          {data.skills ? <SkillsPanel skills={data.skills} /> : hiddenNote("skills")}
         </Panel>
 
         <div className={data.isOwner ? "c8" : "c12"}>

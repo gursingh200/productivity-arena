@@ -88,7 +88,7 @@ export const SKILL_SOURCES = {
   consistency: ["human"],
   endurance: ["human"],
   intensity: ["agents"],
-  velocity: [],
+  parallelism: ["agents"],
   competitive: ["xp"],
   camaraderie: ["human", "agents"],
   orchestration: ["human", "agents"],

@@ -6,6 +6,7 @@
  * UTC). XP rows are already bucketed into each user's local day, so a week
  * is the set of local days from that Monday's date to the next Monday's.
  */
+import { cache } from "react";
 import { and, gte, lt, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { dailyRollup, xpLedger } from "@/db/schema";
@@ -42,9 +43,8 @@ export function weekDays(now: Date): { thisWeek: string; nextWeek: string; lastW
   return { thisWeek, nextWeek: addDays(thisWeek, 7), lastWeek: addDays(thisWeek, -7) };
 }
 
-export async function weeklyStandings(now: Date = new Date()): Promise<Standing[]> {
-  return standingsForWeek(weekDays(now).thisWeek);
-}
+/** This week's standings; cached for the request, since a page can need them several times. */
+export const weeklyStandings = cache(async (now: Date = new Date()): Promise<Standing[]> => standingsForWeek(weekDays(now).thisWeek));
 
 /** Standings for the company week starting on `thisWeek` (a Monday, YYYY-MM-DD). */
 export async function standingsForWeek(thisWeek: string): Promise<Standing[]> {

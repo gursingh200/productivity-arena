@@ -2,22 +2,29 @@ import { CATEGORY_LABEL, SKILL_SOURCES } from "@/lib/sharing";
 import type { SkillsRadar } from "@/lib/skills";
 
 /** Scores per axis; null for an axis the viewer can't see. */
-type Scores = Record<keyof SkillsRadar, number | null>;
+export type Scores = Record<keyof SkillsRadar, number | null>;
+export type Scale = "team" | "guild" | "absolute";
 
-/** The eight axes, in radar order, with what each measures (spec §6, last 30 days). */
-export const SKILLS: Array<{ key: keyof SkillsRadar; name: string; what: string }> = [
-  { key: "willpower", name: "Willpower", what: "Your typical longest focus block. 10 = 2 hours." },
-  { key: "consistency", name: "Consistency", what: "Weekdays with 2+ hours of your own time. 10 = every weekday." },
-  { key: "endurance", name: "Endurance", what: "Your average hours on days you worked. 10 = 8 hours." },
-  { key: "intensity", name: "Intensity", what: "Agent output tokens per agent-hour. 10 = 200K." },
-  { key: "velocity", name: "Velocity", what: "Linear issues closed per week. 10 = 10 a week." },
-  { key: "competitive", name: "Competitive", what: "Share of offered quests you completed. 5 until you get one." },
-  { key: "camaraderie", name: "Camaraderie", what: "Your share of your guild’s hours. 10 = at least an equal share." },
-  { key: "orchestration", name: "Orchestration", what: "Agent-hours per hour of your own time. 10 = 3×." },
+/** The eight axes, in radar order, with what each measures (spec §6, last 30 days) and its absolute target. */
+export const SKILLS: Array<{ key: keyof SkillsRadar; name: string; what: string; target: string }> = [
+  { key: "willpower", name: "Willpower", what: "Your typical longest focus block.", target: "10 = 2 hours" },
+  { key: "consistency", name: "Consistency", what: "Weekdays with 2+ hours of your own time.", target: "10 = every weekday" },
+  { key: "endurance", name: "Endurance", what: "Your average hours on days you worked.", target: "10 = 8 hours" },
+  { key: "intensity", name: "Intensity", what: "Agent output tokens per agent-hour.", target: "10 = 200K" },
+  { key: "parallelism", name: "Parallelism", what: "Total agent hours ÷ agent hours: agents and sub-agents running side by side.", target: "10 = 3×" },
+  { key: "competitive", name: "Competitive", what: "Share of offered quests you completed.", target: "10 = all of them; 5 until you get one" },
+  { key: "camaraderie", name: "Camaraderie", what: "Your share of your guild’s hours.", target: "10 = at least an equal share" },
+  { key: "orchestration", name: "Orchestration", what: "Agent-hours per hour of your own time.", target: "10 = 3×" },
 ];
 
-/** Eight-axis radar, 0–10 per axis. Labels only; the list beside it carries the values. */
-export function Radar({ skills }: { skills: Scores }) {
+export const SCALE_NOTE: Record<Scale, string> = {
+  team: "Ranked against everyone active in the last 30 days: 10 is the top, 0 the bottom.",
+  guild: "Ranked against your guild: 10 is the top, 0 the bottom.",
+  absolute: "Against fixed targets.",
+};
+
+/** One or more people on the same eight axes, 0–10 per axis. */
+export function Radar({ series }: { series: Array<{ label: string; color: string; scores: Scores }> }) {
   const cx = 200;
   const cy = 190;
   const R = 130;
@@ -26,10 +33,10 @@ export function Radar({ skills }: { skills: Scores }) {
     return [cx + r * Math.cos(a), cy + r * Math.sin(a)] as const;
   };
   const ring = (f: number) => SKILLS.map((_, i) => point(i, R * f).join(",")).join(" ");
-  const values = SKILLS.map(({ key }, i) => point(i, (R * Math.max(0, Math.min(10, skills[key] ?? 0))) / 10));
 
   return (
-    <svg className="radar" viewBox="-95 -5 590 390" role="img" aria-label="Skills radar, scores 0 to 10">
+    <svg className="radar" viewBox="-95 -5 590 390" role="img"
+      aria-label={`Skills radar, scores 0 to 10, for ${series.map((s) => s.label).join(" and ")}`}>
       {[0.25, 0.5, 0.75, 1].map((f) => (
         <polygon key={f} points={ring(f)} fill="none" stroke="var(--line)" strokeWidth="1" />
       ))}
@@ -37,10 +44,18 @@ export function Radar({ skills }: { skills: Scores }) {
         const [x, y] = point(i, R);
         return <line key={i} x1={cx} y1={cy} x2={x} y2={y} stroke="var(--line-soft)" strokeWidth="1" />;
       })}
-      <polygon points={values.map((p) => p.join(",")).join(" ")} fill="var(--human)" fillOpacity="0.18" stroke="var(--human)" strokeWidth="2" strokeLinejoin="round" />
-      {values.map(([x, y], i) => (
-        <circle key={i} cx={x} cy={y} r="4" fill="var(--human)" stroke="var(--panel)" strokeWidth="2" />
-      ))}
+      {series.map((s) => {
+        const values = SKILLS.map(({ key }, i) => point(i, (R * Math.max(0, Math.min(10, s.scores[key] ?? 0))) / 10));
+        return (
+          <g key={s.label}>
+            <polygon points={values.map((p) => p.join(",")).join(" ")} fill={s.color} fillOpacity={series.length > 1 ? 0.12 : 0.18}
+              stroke={s.color} strokeWidth="2" strokeLinejoin="round" />
+            {values.map(([x, y], i) => (
+              <circle key={i} cx={x} cy={y} r="4" fill={s.color} stroke="var(--panel)" strokeWidth="2" />
+            ))}
+          </g>
+        );
+      })}
       {SKILLS.map(({ key, name }, i) => {
         const [x, y] = point(i, R + 22);
         const anchor = Math.abs(x - cx) < 10 ? "middle" : x > cx ? "start" : "end";
@@ -52,10 +67,10 @@ export function Radar({ skills }: { skills: Scores }) {
   );
 }
 
-export function SkillList({ skills }: { skills: Scores }) {
+export function SkillList({ skills, scale }: { skills: Scores; scale: Scale }) {
   return (
     <div className="skill-list">
-      {SKILLS.map(({ key, name, what }) => (
+      {SKILLS.map(({ key, name, what, target }) => (
         <div className="skill" key={key}>
           <div className="skill-top">
             <span className="skill-name">{name}</span>
@@ -66,7 +81,7 @@ export function SkillList({ skills }: { skills: Scores }) {
           <div className="skill-what">
             {skills[key] === null
               ? `Hidden: it’s computed from ${SKILL_SOURCES[key].map((c) => CATEGORY_LABEL[c].toLowerCase()).join(" and ")}, which you can’t see.`
-              : what}
+              : scale === "absolute" ? `${what} ${target}.` : what}
           </div>
         </div>
       ))}

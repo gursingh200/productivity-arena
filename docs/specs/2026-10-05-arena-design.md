@@ -359,6 +359,10 @@ Admins create, rename and delete guilds and put people in them from the Team pag
 
 ## 6. Skills radar (last 30 days, 0–10)
 
+Three scales (toggle): **Team** (default) = percentile among everyone active in the last
+30 days, **Guild** = percentile within your guild, **Absolute** = the targets below.
+Computed for everyone at once (`skills-db.ts`), cached per request.
+
 | Skill | Measure | 10 = |
 |---|---|---|
 | Willpower | median longest daily focus block | 120 min |
@@ -366,7 +370,7 @@ Admins create, rename and delete guilds and put people in them from the Team pag
 | Endurance | avg human hours on active days | 8 h |
 | Orchestration | agent-hours ÷ human-hours | 3.0 |
 | Intensity | output tokens per agent-hour | 200K |
-| Velocity | Linear issues closed per week | 10 |
+| Parallelism | total agent hours ÷ agent hours (sub-agents side by side) | 3× |
 | Competitive | quests completed ÷ quests offered | 100% |
 | Camaraderie | guild quest contribution share × guild size | equal share |
 
