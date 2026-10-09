@@ -9,13 +9,12 @@ both share its category.
 - **Velocity → Parallelism.** Velocity measured Linear issues only, which zeroed
   everyone outside engineering. Parallelism = total agent hours ÷ agent hours
   (sub-agents running side by side), 10 = 3×. Linear still earns XP.
-- **Three scales**, chosen with a toggle wherever the radar appears:
-  - **Absolute** (default): today's fixed targets.
+- **Three scales** on profiles (Compare scales head to head instead):
+  - **Absolute** (default): fixed targets (10 = 120-min block, 8 h days, 3×…).
   - **Team**: each axis is your percentile among people active in
     the last 30 days (top = 10, bottom = 0). Shows where you're strong compared
     with everyone.
   - **Guild**: the same, among your guild.
-  - **Absolute**: today's fixed targets (10 = 120-min block, 8 h days, 3×…).
 - An axis is computed only from categories the viewer may see (unchanged).
 
 ## 2. Compare (`/compare?with=<handle>`)
