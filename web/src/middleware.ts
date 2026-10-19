@@ -8,6 +8,7 @@ const PUBLIC_PATHS = [
   "/api/agent/status",
   "/api/agent/quests",
   "/api/agent/linear",
+  "/api/agent/app-icons",
 ];
 
 export default auth((req) => {

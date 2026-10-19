@@ -575,3 +575,6 @@ td.vs-lead { color: var(--text); }
 .history-row:hover .row-name { text-decoration: underline; text-underline-offset: 3px; }
 .history-row.me .row-name { font-weight: 500; }
 .inline-link { color: var(--text); text-decoration: underline; text-underline-offset: 3px; }
+
+/* An app's real icon (uploaded by the Mac) in place of its letter. */
+.app-icon.img { background: none; object-fit: contain; border-radius: 0; }

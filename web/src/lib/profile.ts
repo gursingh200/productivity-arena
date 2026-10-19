@@ -8,6 +8,7 @@
 import { and, desc, eq, gte, inArray, lt, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { chats, dailyRollup, linearIssues, quests, users, xpLedger, type Quest, type User } from "@/db/schema";
+import { appsWithIcons } from "@/lib/app-icons";
 import { awayToday } from "@/lib/league-db";
 import { startDay } from "@/lib/start-date";
 import { type League } from "@/lib/leagues";
@@ -52,6 +53,8 @@ export interface AppTotal {
   name: string | null;
   sec: number;
   pct: number;
+  /** The Mac has uploaded this app's icon. */
+  icon: boolean;
 }
 
 export interface ProfileData {
@@ -208,7 +211,7 @@ export async function loadProfile(handle: string, viewer: User, now = new Date()
         longest: longest ? { agent: longest.agent, agentSec: longest.agentSec, turns: longest.turns } : null,
       },
     } : null,
-    apps: visible.apps ? appsSection(recent30, visible.meetings) : null,
+    apps: visible.apps ? await appsSection(recent30, visible.meetings) : null,
     skills: visible.skills ? scaledSkills((await allSkillScores()).get(user.id) ?? emptyScores(), visible) : null,
   };
 }
@@ -265,8 +268,8 @@ async function xpSection(user: User, isOwner: boolean, visible: Visibility, now:
  * Apps and call apps over the last 30 days, from the daily rollups (minutes
  * aren't kept that long). Each day stores its top 10 apps and top 5 call apps.
  */
-function appsSection(recent30: Array<typeof dailyRollup.$inferSelect>, withCalls: boolean): NonNullable<ProfileData["apps"]> {
-  const totals = (key: "topApps" | "meetingApps", limit: number): AppTotal[] => {
+async function appsSection(recent30: Array<typeof dailyRollup.$inferSelect>, withCalls: boolean): Promise<NonNullable<ProfileData["apps"]>> {
+  const totals = (key: "topApps" | "meetingApps", limit: number) => {
     const byId = new Map<string, { id: string; name: string | null; sec: number }>();
     for (const r of recent30) {
       for (const app of r[key] as Array<{ id: string; name: string | null; sec: number }>) {
@@ -279,7 +282,11 @@ function appsSection(recent30: Array<typeof dailyRollup.$inferSelect>, withCalls
     const total = all.reduce((s, a) => s + a.sec, 0);
     return all.slice(0, limit).map((a) => ({ ...a, pct: total > 0 ? (a.sec / total) * 100 : 0 }));
   };
-  return { top: totals("topApps", 8), calls: withCalls ? totals("meetingApps", 5) : null };
+  const top = totals("topApps", 8);
+  const calls = withCalls ? totals("meetingApps", 5) : null;
+  const icons = await appsWithIcons([...top, ...(calls ?? [])].map((a) => a.id));
+  const withIcon = (apps: Array<Omit<AppTotal, "icon">>): AppTotal[] => apps.map((a) => ({ ...a, icon: icons.has(a.id) }));
+  return { top: withIcon(top), calls: calls ? withIcon(calls) : null };
 }
 
 /** Daily totals from the first day with data (or the start date) to today, a year at most. */

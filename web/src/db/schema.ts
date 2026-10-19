@@ -13,6 +13,7 @@ import {
   pgEnum,
   index,
   uniqueIndex,
+  customType,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
@@ -475,6 +476,17 @@ export const linearIssues = pgTable(
     index("linear_issues_user_idx").on(table.userId),
   ]
 );
+
+// ─── App icons ────────────────────────────────────────────────────────────────
+
+const bytea = customType<{ data: Buffer }>({ dataType: () => "bytea" });
+
+/** Each app's icon as a small PNG, uploaded once by the first Mac that uses it. Shared by everyone. */
+export const appIcons = pgTable("app_icons", {
+  bundleId: text("bundle_id").primaryKey(),
+  png: bytea("png").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
 
 // ─── Relations ────────────────────────────────────────────────────────────────
 

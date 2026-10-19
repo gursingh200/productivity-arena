@@ -17,7 +17,10 @@ function AppRows({ apps, tone, show }: { apps: AppTotal[]; tone: "human" | "meet
       {apps.map((app) => (
         <div className="row" key={app.id}>
           <div className="row-main">
-            <span className="app-icon" aria-hidden>{initial(app)}</span>
+            {app.icon
+              // eslint-disable-next-line @next/next/no-img-element -- a 64px PNG from our own API; next/image adds nothing here
+              ? <img className="app-icon img" src={`/api/app-icon/${encodeURIComponent(app.id)}`} alt="" width={30} height={30} />
+              : <span className="app-icon" aria-hidden>{initial(app)}</span>}
             <span className="row-name">{label(app)}</span>
           </div>
           <span className="row-value num">{show === "pct" ? percent(app.pct) : duration(app.sec)}</span>

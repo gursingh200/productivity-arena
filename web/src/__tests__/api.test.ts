@@ -10,7 +10,7 @@ vi.mock("next/server", async (importOriginal) => ({
   ...(await importOriginal<typeof import("next/server")>()),
   after: (task: () => unknown) => { void task(); },
 }));
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 
 const DB_URL = process.env.DATABASE_URL;
 
@@ -23,6 +23,8 @@ describe.skipIf(!DB_URL)("device API", async () => {
   const accept = (await import("@/app/api/agent/quests/[id]/accept/route")).POST;
   const decline = (await import("@/app/api/agent/quests/[id]/decline/route")).POST;
   const linear = await import("@/app/api/agent/linear/route");
+  const appIconsRoute = (await import("@/app/api/agent/app-icons/route")).POST;
+  const appIconGet = (await import("@/app/api/app-icon/[bundleId]/route")).GET;
 
   const TOKEN = "test-token-" + Math.random().toString(36).slice(2);
   const DEVICE_UUID = "6f1c2d3e-4b5a-4c7d-8e9f-0a1b2c3d4e5f";
@@ -72,6 +74,56 @@ describe.skipIf(!DB_URL)("device API", async () => {
     await db.delete(schema.quests).where(eq(schema.quests.userId, userId));
     await db.delete(schema.minuteMeeting).where(eq(schema.minuteMeeting.userId, userId));
     await db.delete(schema.chats).where(eq(schema.chats.userId, userId));
+  });
+
+  describe("app icons from the Mac", () => {
+    // Just the PNG header: enough for the format and size checks.
+    const png = (side: number) => {
+      const b = Buffer.alloc(40);
+      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(b, 0);
+      b.writeUInt32BE(13, 8);
+      b.write("IHDR", 12, "latin1");
+      b.writeUInt32BE(side, 16);
+      b.writeUInt32BE(side, 20);
+      return b;
+    };
+    const send = (icons: Array<{ bundleId: string; png: Buffer | string }>, token: string | null = TOKEN) =>
+      appIconsRoute(new NextRequest("http://localhost/api/agent/app-icons", {
+        method: "POST",
+        headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ icons: icons.map((i) => ({ bundleId: i.bundleId, png: typeof i.png === "string" ? i.png : i.png.toString("base64") })) }),
+      }));
+    const used = `test.icons.${Date.now()}`;
+    const unused = `${used}.never`;
+
+    afterAll(async () => {
+      await db.delete(schema.appIcons).where(inArray(schema.appIcons.bundleId, [used, unused, "private"]));
+    });
+
+    it("keeps icons of apps the person used, first one wins", async () => {
+      expect((await post(payload([{ t: minuteIso(5), apps: [{ id: used, name: "Used", sec: 60 }], agents: [] }]))).status).toBe(200);
+      const res = await send([{ bundleId: used, png: png(64) }, { bundleId: unused, png: png(64) }, { bundleId: "private", png: png(64) }]);
+      expect(res.status).toBe(200);
+      expect((await res.json()).saved).toBe(1);
+      const again = await send([{ bundleId: used, png: png(32) }]);
+      expect((await again.json()).saved).toBe(0);
+      const stored = await db.query.appIcons.findFirst({ where: eq(schema.appIcons.bundleId, used) });
+      expect(stored?.png.readUInt32BE(16)).toBe(64);
+
+      const got = await appIconGet(new NextRequest(`http://localhost/api/app-icon/${used}`), { params: Promise.resolve({ bundleId: used }) });
+      expect(got.status).toBe(200);
+      expect(got.headers.get("content-type")).toBe("image/png");
+      const missing = await appIconGet(new NextRequest(`http://localhost/api/app-icon/${unused}`), { params: Promise.resolve({ bundleId: unused }) });
+      expect(missing.status).toBe(404);
+    });
+
+    it("rejects non-PNGs, oversized icons and unknown devices", async () => {
+      await post(payload([{ t: minuteIso(5), apps: [{ id: used, name: "Used", sec: 60 }], agents: [] }]));
+      await db.delete(schema.appIcons).where(eq(schema.appIcons.bundleId, used));
+      expect((await (await send([{ bundleId: used, png: Buffer.from("<svg/>") }])).json()).saved).toBe(0);
+      expect((await (await send([{ bundleId: used, png: png(512) }])).json()).saved).toBe(0);
+      expect((await send([{ bundleId: used, png: png(64) }], "wrong")).status).toBe(401);
+    });
   });
 
   describe("Linear issues from the Mac", () => {
