@@ -5,6 +5,13 @@ import Testing
 struct PayloadTests {
     let device = DeviceInfo(id: "dev-1", name: "Test Mac", os: "macOS 26.0", agentVersion: "0.1.0")
 
+    @Test func encodesAppIconsAsBase64() throws {
+        let icon = AppIcon(bundleId: "com.hnc.Discord", png: Data([0x89, 0x50, 0x4E, 0x47]))
+        let json = try JSONSerialization.jsonObject(with: JSONEncoder().encode(["icons": [icon]])) as! [String: [[String: String]]]
+        #expect(json["icons"]?.first == ["bundleId": "com.hnc.Discord", "png": "iVBORw=="])
+        #expect(ArenaEngine.notApps.contains("private") && ArenaEngine.notApps.contains(HumanRecorder.calendarBundleId))
+    }
+
     @Test func encodesSpecFieldNames() throws {
         let box = try Sandbox()
         let t = minuteOf(at("2026-10-05T10:31:00Z"))

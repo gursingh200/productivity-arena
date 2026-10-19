@@ -74,6 +74,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menuBar.onDisconnectLinear = { [weak self] in self?.disconnectLinear() }
         menuBar.onToggleCalendar = { [weak self] in self?.toggleCalendar() }
         engine.linearKey = Keychain.loadLinearKey()
+        engine.appIcon = { AppIcons.png(bundleId: $0) }
         menuBar.onOpenActivity = { [weak self] in self?.openActivity(range: nil) }
         menuBar.onQuestResponse = { [weak self] id, accept in
             guard let engine = self?.engine else { return }

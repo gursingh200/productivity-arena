@@ -154,6 +154,11 @@ public final class ArenaClient: @unchecked Sendable {
         _ = try await send("DELETE", "api/agent/linear")
     }
 
+    /// Sends app icons (small PNGs) so the website can show them next to app names.
+    public func uploadIcons(_ icons: [AppIcon]) async throws {
+        _ = try await send("POST", "api/agent/app-icons", body: try JSONEncoder().encode(["icons": icons]))
+    }
+
     private func send(_ method: String, _ path: String, body: Data? = nil) async throws -> Data {
         guard let serverURL, let token else { throw APIError.notPaired }
         var request = URLRequest(url: serverURL.appendingPathComponent(path))

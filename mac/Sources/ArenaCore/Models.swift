@@ -102,6 +102,17 @@ public struct DeviceInfo: Codable, Equatable {
     }
 }
 
+/// One app's icon as sent to the server: a PNG, base64 encoded in JSON.
+public struct AppIcon: Codable, Equatable {
+    public var bundleId: String
+    public var png: Data
+
+    public init(bundleId: String, png: Data) {
+        self.bundleId = bundleId
+        self.png = png
+    }
+}
+
 public struct AppEntry: Codable, Equatable {
     public var id: String
     public var name: String?

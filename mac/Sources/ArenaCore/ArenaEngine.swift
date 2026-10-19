@@ -32,6 +32,12 @@ public final class ArenaEngine: @unchecked Sendable {
     private var lastOpenCodeScan = Date.distantPast
     private var lastCursorScan = Date.distantPast
 
+    /// An app's icon as a small PNG, or nil when it has none (set by the app; nil in tests).
+    public var appIcon: ((String) -> Data?)?
+    static let iconsSentKey = "icons.sent"
+    /// Ids in payloads that aren't apps with an icon to send.
+    static let notApps: Set<String> = ["private", "unknown", HumanRecorder.calendarBundleId]
+
     /// Latest status from the server; delivered on the main queue.
     public var onStatus: ((StatusPayload) -> Void)?
     public private(set) var lastStatus: StatusPayload?
@@ -259,12 +265,14 @@ public final class ArenaEngine: @unchecked Sendable {
         guard canStart else { return }
         defer { queue.sync { uploading = false } }
 
+        var uploadedApps = Set<String>()
         while true {
             guard var built = queue.sync(execute: { try? PayloadBuilder.build(store: store, device: device) }) else { return }
             let resending = queue.sync { (try? store.value(Self.resendPendingKey)) == "1" }
             if built.isEmpty {
                 // Everything queued has been sent: the resend is done.
                 if resending { queue.sync { log { try store.setValue(nil, for: Self.resendPendingKey) } } }
+                await sendIcons(for: uploadedApps)
                 let due = queue.sync { Date().timeIntervalSince(lastStatusAt) >= Self.idleStatusInterval }
                 if due { await refreshStatus() }
                 return
@@ -278,11 +286,32 @@ public final class ArenaEngine: @unchecked Sendable {
                     log { try store.clearDeletedChats(built.deletedChats) }
                     backoff.succeeded()
                 }
+                for minute in built.payload.minutes {
+                    for app in minute.apps + (minute.meetings ?? []) { uploadedApps.insert(app.id) }
+                }
                 if let status = response.status { publish(status) }
             } catch {
                 queue.sync { backoff.failed(at: Date()) }
                 return
             }
+        }
+    }
+
+    /// Sends the icon of each uploaded app this Mac hasn't sent before, 20 at a time.
+    /// An app without an icon counts as sent, so it isn't looked up again.
+    private func sendIcons(for apps: Set<String>) async {
+        guard let appIcon else { return }
+        var sent = queue.sync { Set(((try? store.value(Self.iconsSentKey)) ?? nil)?.split(separator: "\n").map(String.init) ?? []) }
+        let pending = apps.subtracting(sent).subtracting(Self.notApps).sorted()
+        for start in stride(from: 0, to: pending.count, by: 20) {
+            let ids = Array(pending[start..<min(start + 20, pending.count)])
+            let icons = ids.compactMap { id in appIcon(id).map { AppIcon(bundleId: id, png: $0) } }
+            if !icons.isEmpty {
+                do { try await client.uploadIcons(icons) } catch { return }
+            }
+            sent.formUnion(ids)
+            let stored = sent.sorted().joined(separator: "\n")
+            queue.sync { log { try store.setValue(stored, for: Self.iconsSentKey) } }
         }
     }
 
