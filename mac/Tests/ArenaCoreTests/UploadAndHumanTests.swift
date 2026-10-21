@@ -231,13 +231,15 @@ struct HumanRecorderTests {
         }
     }
 
-    @Test func privateMeetingAppsAreAnonymous() throws {
+    @Test func privateCallAppsArentRecorded() throws {
         let box = try Sandbox()
         let recorder = HumanRecorder(store: box.store)
         let call = MicApps.Reading(dictating: false, meeting: zoom)
         try tick(recorder, "2026-10-05T10:00:00Z", app: safari, mic: call)
         try tick(recorder, "2026-10-05T10:00:05Z", app: safari, privateApps: [zoom.bundleId], mic: call)
-        #expect(try box.store.meetingSeconds(t: minute("2026-10-05T10:00:00Z")) == [Store.AppSeconds(bundleId: "private", appName: "", sec: 5)])
+        #expect(try box.store.meetingSeconds(t: minute("2026-10-05T10:00:00Z")).isEmpty)
+        // Safari isn't private, so the minute is still human time.
+        #expect(try box.store.humanSeconds(from: minute("2026-10-05T10:00:00Z"), to: minute("2026-10-05T10:00:00Z")) == 60)
     }
 }
 

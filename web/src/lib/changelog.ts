@@ -18,8 +18,7 @@ export const CHANGELOG: Release[] = [
     title: "Private apps don’t count",
     mac: "0.1.20",
     changes: [
-      "Time in apps you’ve marked private is no longer human time, and private apps no longer appear in app lists. A minute spent only in private apps doesn’t count at all.",
-      "Private app time already recorded has been removed, and those days’ totals and XP recalculated.",
+      "From now on, time in apps you’ve marked private doesn’t count and isn’t listed: a minute spent only in private apps isn’t human time, and a call in a private app isn’t meeting time. Earlier days stay as they were.",
     ],
   },
   {

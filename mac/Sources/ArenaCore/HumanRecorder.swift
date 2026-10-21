@@ -107,16 +107,15 @@ public final class HumanRecorder {
 
         // Meeting time: a call app holding the mic, else a calendar meeting while
         // the Mac is awake and unlocked (an in-person meeting with the laptop open).
+        // A private call app's time isn't recorded at all.
         let calendar = tick.calendarMeeting.map { MicApp(bundleId: Self.calendarBundleId, name: $0, use: .call) }
-        if let meeting = tick.mic.meeting ?? calendar {
+        if let meeting = tick.mic.meeting ?? calendar, !privateApps.contains(meeting.bundleId) {
             if meetingThisMinute.t != t {
                 meetingThisMinute = (t, try store.meetingSeconds(t: t).reduce(0) { $0 + $1.sec })
             }
             let credit = min(seconds, 60 - meetingThisMinute.sec)
             if credit > 0 {
-                let isPrivate = privateApps.contains(meeting.bundleId)
-                try store.addMeetingSeconds(t: t, bundleId: isPrivate ? "private" : meeting.bundleId,
-                                            appName: isPrivate ? "" : meeting.name, sec: credit)
+                try store.addMeetingSeconds(t: t, bundleId: meeting.bundleId, appName: meeting.name, sec: credit)
                 meetingThisMinute.sec += credit
                 result.meetingSeconds = credit
             }

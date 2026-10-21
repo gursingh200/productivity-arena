@@ -103,6 +103,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       }
       let meetingLeft = 60; // one minute holds at most 60 s of calls
       for (const m of minute.meetings) {
+        if (m.id === PRIVATE_APP) continue;
         const sec = Math.min(m.sec, meetingLeft);
         if (sec === 0) continue;
         meetingLeft -= sec;
