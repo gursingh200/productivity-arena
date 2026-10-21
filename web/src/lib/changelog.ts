@@ -14,7 +14,15 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
-    date: "2026-10-09",
+    date: "2026-10-21",
+    title: "App icons",
+    mac: "0.1.19",
+    changes: [
+      "The Apps panel shows each app’s own icon instead of its first letter. Your Mac sends an app’s icon the first time it tracks that app after this update, so icons fill in as people use their apps.",
+    ],
+  },
+  {
+    date: "2026-10-21",
     title: "Your last week, filled in",
     mac: "0.1.19",
     changes: [

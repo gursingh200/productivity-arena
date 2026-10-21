@@ -47,7 +47,7 @@ Vercel env (production + preview): `AUTH_SECRET`, `AUTH_GOOGLE_ID/SECRET`,
   never-set accounts to the company timezone, evaluates everyone's
   achievements). Check the build log for those lines.
 - A push that touches `mac/**` also runs "Release Mac app" (version
-  `mac/VERSION` + run number, currently 0.1.17). Macs update within an hour.
+  `mac/VERSION` + run number, currently 0.1.19). Macs update within an hour.
 - Before shipping user-visible changes, add an entry to
   `web/src/lib/changelog.ts` (What's new); set `mac` to the release version.
 - Work that isn't ready goes on a branch (`social` was the last one, now
@@ -94,6 +94,10 @@ Gotchas:
   which its own minutes up to 7 days old can be replaced. The Mac resends its
   last 7 days on every pairing (a re-pair is a new device row) and once after
   updating to 0.1.19 (`resend.weekDone` in the local store).
+- App icons: the Mac sends each tracked app's own icon (64 px PNG) once
+  (`POST /api/agent/app-icons`, table `app_icons`); the server keeps only
+  icons of apps the sender used, first one wins; the Apps panel falls back to
+  the letter.
 - Days follow each person's Mac timezone.
 - XP caps: focus 10 h/day (8–10 h at half rate), agents 24 agent-hours/day,
   orchestration 150, Linear 400. XP uses clock agent hours, not totals.
