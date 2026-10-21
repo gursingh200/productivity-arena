@@ -11,6 +11,7 @@ import { recomputeForDays, refreshAgentTotals } from "@/lib/rollup";
 import { startInstant } from "@/lib/start-date";
 import { changeTimezone } from "@/lib/user-timezone";
 import { buildStatusPayload } from "@/lib/status";
+import { PRIVATE_APP } from "@/lib/private-apps";
 import { toUserDay } from "@/lib/timezone";
 
 /**
@@ -96,7 +97,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       const t = new Date(minute.t);
       touchedDays.add(toUserDay(t, timezone));
       for (const app of minute.apps) {
-        if (app.sec === 0) continue;
+        // Private apps never count (older Macs still send them).
+        if (app.sec === 0 || app.id === PRIVATE_APP) continue;
         appRows.push({ userId: auth.userId, deviceId: auth.deviceId, t, bundleId: app.id, appName: app.name ?? null, activeSec: app.sec });
       }
       let meetingLeft = 60; // one minute holds at most 60 s of calls

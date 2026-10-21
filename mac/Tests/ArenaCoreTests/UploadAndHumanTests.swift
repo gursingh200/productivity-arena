@@ -30,7 +30,8 @@ struct PayloadTests {
         let minute = try #require((json["minutes"] as? [[String: Any]])?.first)
         #expect(minute["t"] as? String == "2026-10-05T10:31:00Z")
         let apps = try #require(minute["apps"] as? [[String: Any]])
-        #expect(apps.contains { $0["id"] as? String == "private" && $0["name"] is NSNull })
+        // Private apps never leave the Mac: their share goes to the other apps.
+        #expect(apps.map { $0["id"] as? String } == ["com.apple.Safari"])
         #expect(apps.reduce(0) { $0 + ($1["sec"] as? Int ?? 0) } == 60)
         let meeting = try #require((minute["meetings"] as? [[String: Any]])?.first)
         #expect(meeting["id"] as? String == "us.zoom.xos" && meeting["name"] as? String == "Zoom" && meeting["sec"] as? Int == 20)
@@ -153,6 +154,28 @@ struct HumanRecorderTests {
         let rows = try box.store.appSeconds(t: minute("2026-10-05T10:00:00Z"))
         #expect(rows == [Store.AppSeconds(bundleId: "private", appName: "", sec: 5)])
         #expect(try box.store.titleTotals(from: 0, to: minuteOf(testNow), limit: 5).isEmpty)
+    }
+
+    @Test func privateOnlyMinutesArentHumanTime() throws {
+        let box = try Sandbox()
+        let privateOnly = minute("2026-10-05T10:00:00Z")
+        let mixed = minute("2026-10-05T10:01:00Z")
+        let noApp = minute("2026-10-05T10:02:00Z")
+        for t in [privateOnly, mixed, noApp] { try box.store.markActive(t) }
+        try box.store.addAppSeconds(t: privateOnly, bundleId: "private", appName: "", sec: 50)
+        try box.store.addAppSeconds(t: mixed, bundleId: "private", appName: "", sec: 40)
+        try box.store.addAppSeconds(t: mixed, bundleId: "com.apple.Safari", appName: "Safari", sec: 10)
+
+        // Locally: the private-only minute isn't counted; the others are.
+        #expect(try box.store.humanSeconds(from: privateOnly, to: noApp) == 120)
+        #expect(try box.store.appTotals(from: privateOnly, to: noApp).map(\.bundleId) == ["com.apple.Safari"])
+
+        let device = DeviceInfo(id: "dev-1", name: "Test Mac", os: "macOS 26.0", agentVersion: "0.1.0")
+        let built = try PayloadBuilder.build(store: box.store, device: device)
+        let apps = Dictionary(uniqueKeysWithValues: built.payload.minutes.map { ($0.t, $0.apps) })
+        #expect(apps["2026-10-05T10:00:00Z"] == [])
+        #expect(apps["2026-10-05T10:01:00Z"] == [AppEntry(id: "com.apple.Safari", name: "Safari", sec: 60)])
+        #expect(apps["2026-10-05T10:02:00Z"] == [AppEntry(id: "unknown", name: "Other", sec: 60)])
     }
 
     @Test func meetingsAreCappedAndDontMakeMinutesActive() throws {

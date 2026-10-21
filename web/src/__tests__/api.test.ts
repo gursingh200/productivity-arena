@@ -369,6 +369,30 @@ describe.skipIf(!DB_URL)("device API", async () => {
     expect(live).toMatchObject({ state: "offered", title: "Stay 15 minutes longer", xp: 200 });
   });
 
+  it("never counts private apps: from Macs that still send them, or already stored", async () => {
+    const humanToday = async () =>
+      (await db.select().from(schema.dailyRollup).where(eq(schema.dailyRollup.userId, userId)))[0]!.humanSec;
+    expect((await post(payload([
+      { t: minuteIso(6), apps: [{ id: "private", sec: 60 }], agents: [] },
+      { t: minuteIso(5), apps: [{ id: "com.apple.Terminal", name: "Terminal", sec: 60 }], agents: [] },
+    ]))).status).toBe(200);
+    expect((await db.select().from(schema.minuteApp).where(eq(schema.minuteApp.userId, userId))).map((r) => r.bundleId))
+      .toEqual(["com.apple.Terminal"]);
+    expect(await humanToday()).toBe(60);
+
+    // Stored before the rule: removed on deploy and the day recomputed.
+    await db.insert(schema.minuteApp).values({ userId, deviceId, t: new Date(minuteIso(7)), bundleId: "private", activeSec: 60 });
+    const { recomputeForDays } = await import("@/lib/rollup");
+    const { toUserDay } = await import("@/lib/timezone");
+    const user = await db.query.users.findFirst({ where: eq(schema.users.id, userId) });
+    await recomputeForDays(userId, new Set([toUserDay(new Date(minuteIso(7)), user!.timezone)]));
+    expect(await humanToday()).toBe(120);
+    const { removePrivateAppTime } = await import("@/lib/private-apps");
+    expect(await removePrivateAppTime()).toBeGreaterThanOrEqual(1);
+    expect(await humanToday()).toBe(60);
+    expect(await removePrivateAppTime()).toBe(0);
+  });
+
   it("stores meeting time, at most 60 s a minute, and lets a call win over typing", async () => {
     const minutes = [
       { t: minuteIso(5), apps: [], agents: [], meetings: [{ id: "us.zoom.xos", name: "zoom.us", sec: 45 }, { id: "com.granola.app", name: "Granola", sec: 40 }] },

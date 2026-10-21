@@ -24,7 +24,7 @@ public enum PayloadBuilder {
         let minutes = try store.dirtyMinutes(limit: maxMinutes)
         var minutePayloads: [MinutePayload] = []
         for t in minutes {
-            let apps = try store.isActive(t) ? normalized(try store.appSeconds(t: t).map(entry)) : []
+            let apps = try store.isActive(t) ? humanApps(try store.appSeconds(t: t).map(entry)) : []
             let meetings = capped(try store.meetingSeconds(t: t).map(entry).map { m in
                 // Calendar event titles never leave this Mac.
                 var m = m
@@ -55,6 +55,15 @@ public enum PayloadBuilder {
 
     private static func entry(_ app: Store.AppSeconds) -> AppEntry {
         AppEntry(id: app.bundleId, name: app.bundleId == "private" ? nil : app.appName, sec: app.sec)
+    }
+
+    /// An active minute's apps as uploaded. Private apps never count: their
+    /// share goes to the other apps in the minute, and a minute spent only in
+    /// private apps sends no apps, so it isn't human time.
+    public static func humanApps(_ apps: [AppEntry]) -> [AppEntry] {
+        let visible = apps.filter { $0.id != "private" }
+        if !apps.isEmpty && visible.isEmpty { return [] }
+        return normalized(visible)
     }
 
     /// Scales an active minute's app shares to sum to exactly 60 s

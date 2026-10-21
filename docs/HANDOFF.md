@@ -98,6 +98,11 @@ Gotchas:
   (`POST /api/agent/app-icons`, table `app_icons`); the server keeps only
   icons of apps the sender used, first one wins; the Apps panel falls back to
   the letter.
+- Private apps never count: a minute spent only in private apps isn't human
+  time; in a mixed minute their share goes to the other apps. Macs from
+  0.1.20 don't send them; ingest drops them from older Macs; the deploy
+  script deletes any stored ones (`removePrivateAppTime`). Private call apps
+  still count as meeting time.
 - Days follow each person's Mac timezone.
 - XP caps: focus 10 h/day (8–10 h at half rate), agents 24 agent-hours/day,
   orchestration 150, Linear 400. XP uses clock agent hours, not totals.

@@ -113,9 +113,16 @@ public struct ActivityReport: Equatable, Sendable {
         for m in meetings { callByMinute[m.t, default: 0] += m.sec }
         for (t, sec) in callByMinute { add(.meetings, t, min(60, sec)) }
 
-        // Human: 60 s per active minute, minus call time in it.
+        // Apps per active minute, exactly as uploaded (private apps never count).
         let activeSet = Set(active)
-        for t in activeSet { add(.human, t, 60 - min(60, callByMinute[t] ?? 0)) }
+        var appsByMinute: [MinuteT: [AppEntry]] = [:]
+        for a in apps where activeSet.contains(a.t) {
+            appsByMinute[a.t, default: []].append(AppEntry(id: a.id, name: a.name, sec: a.sec))
+        }
+        let shares = Dictionary(uniqueKeysWithValues: activeSet.map { ($0, PayloadBuilder.humanApps(appsByMinute[$0] ?? [])) })
+
+        // Human: 60 s per active minute that isn't private-only, minus call time in it.
+        for (t, minuteApps) in shares where !minuteApps.isEmpty { add(.human, t, 60 - min(60, callByMinute[t] ?? 0)) }
 
         // Agents: summed over parallel sessions.
         var sessionsByMinute: [MinuteT: Int] = [:]
@@ -126,13 +133,9 @@ public struct ActivityReport: Equatable, Sendable {
         report.peakParallel = sessionsByMinute.values.max() ?? 0
 
         // Apps: an active minute's shares scaled to 60 s, exactly as uploaded.
-        var appsByMinute: [MinuteT: [AppEntry]] = [:]
-        for a in apps where activeSet.contains(a.t) {
-            appsByMinute[a.t, default: []].append(AppEntry(id: a.id, name: a.id == "private" ? "Private apps" : a.name, sec: a.sec))
-        }
         var appItems: [String: UsageItem] = [:]
-        for t in activeSet {
-            for entry in PayloadBuilder.normalized(appsByMinute[t] ?? []) {
+        for (t, minuteApps) in shares {
+            for entry in minuteApps {
                 accumulate(&appItems, id: entry.id, name: entry.name ?? entry.id, t: t, sec: entry.sec, bucket: bucket)
             }
         }

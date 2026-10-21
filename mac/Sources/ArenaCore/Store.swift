@@ -149,10 +149,10 @@ public final class Store {
         }
     }
 
-    /// Total seconds per app between two minutes (inclusive), largest first.
+    /// Total seconds per app between two minutes (inclusive), largest first. Private apps aren't listed.
     public func appTotals(from: MinuteT, to: MinuteT) throws -> [AppSeconds] {
         try query("""
-            SELECT bundle_id, MAX(app_name), SUM(sec) FROM app_minute WHERE t BETWEEN ? AND ?
+            SELECT bundle_id, MAX(app_name), SUM(sec) FROM app_minute WHERE t BETWEEN ? AND ? AND bundle_id <> 'private'
             GROUP BY bundle_id ORDER BY SUM(sec) DESC;
             """, [.int(from), .int(to)]) {
             AppSeconds(bundleId: $0.text(0), appName: $0.text(1), sec: Int($0.int(2)))
@@ -371,15 +371,17 @@ public final class Store {
                   [.int(from), .int(to)]) { $0.double(0) }.first ?? 0
     }
 
-    /// Human seconds: 60 per active minute.
     /// Human time: 60 s per active minute, minus any call time in it (a call
     /// wins the minute, matching the server), so human + meetings never overlap.
+    /// A minute spent only in private apps isn't human time.
     public func humanSeconds(from: MinuteT, to: MinuteT) throws -> Int {
         Int(try query("""
             SELECT COALESCE(SUM(60 - MIN(60, COALESCE(m.sec, 0))), 0)
             FROM active_minute a
             LEFT JOIN (SELECT t, SUM(sec) AS sec FROM meeting_minute GROUP BY t) m ON m.t = a.t
-            WHERE a.t BETWEEN ? AND ?;
+            WHERE a.t BETWEEN ? AND ?
+              AND NOT (EXISTS (SELECT 1 FROM app_minute p WHERE p.t = a.t)
+                       AND NOT EXISTS (SELECT 1 FROM app_minute p WHERE p.t = a.t AND p.bundle_id <> 'private'));
             """, [.int(from), .int(to)]) { $0.int(0) }.first ?? 0)
     }
 

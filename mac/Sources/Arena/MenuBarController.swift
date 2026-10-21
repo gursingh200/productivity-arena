@@ -115,8 +115,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
             menu.addItem(.separator())
             menu.addItem(label("Top apps today", bold: true))
             for app in summary.topApps.prefix(Self.topAppCount) {
-                let name = app.bundleId == "private" ? "Private apps" : app.appName
-                menu.addItem(label("\(name)  \(Format.duration(app.sec))"))
+                menu.addItem(label("\(app.appName)  \(Format.duration(app.sec))"))
             }
         }
         if !summary.topTitles.isEmpty {

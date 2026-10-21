@@ -15,6 +15,15 @@ export interface Release {
 export const CHANGELOG: Release[] = [
   {
     date: "2026-10-21",
+    title: "Private apps don’t count",
+    mac: "0.1.20",
+    changes: [
+      "Time in apps you’ve marked private is no longer human time, and private apps no longer appear in app lists. A minute spent only in private apps doesn’t count at all.",
+      "Private app time already recorded has been removed, and those days’ totals and XP recalculated.",
+    ],
+  },
+  {
+    date: "2026-10-21",
     title: "App icons",
     mac: "0.1.19",
     changes: [

@@ -4,6 +4,7 @@ import { db, users } from "@/db";
 import { evaluateAchievements } from "@/lib/achievements";
 import { adoptCompanyTimezone } from "@/lib/user-timezone";
 import { applyOwner } from "@/lib/roles";
+import { removePrivateAppTime } from "@/lib/private-apps";
 
 purgeBeforeStart()
   .then(async ({ startDay }) => {
@@ -12,6 +13,8 @@ purgeBeforeStart()
     if (owner) console.log(`Owner: ${owner}.`);
     const moved = await adoptCompanyTimezone();
     if (moved) console.log(`${moved} account(s) moved from UTC to the company timezone.`);
+    const recomputed = await removePrivateAppTime();
+    if (recomputed) console.log(`Private app time removed; ${recomputed} day(s) recomputed.`);
     // Achievements for what already happened (new achievements on older data).
     let unlocked = 0;
     const everyone = await db.select({ id: users.id }).from(users);
